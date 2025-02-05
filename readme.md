@@ -19,12 +19,15 @@ In WSL,
 sudo apt update
 sudo apt install -y nvidia-container-toolkit
 sudo systemctl restart docker
+https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html 
 
 Pull docker image,
 docker pull nvcr.io/nvidia/mlperf/mlperf-inference:mlpinf-v4.1-cuda12.4-pytorch24.04-ubuntu22.04-x86_64-release
 
 Run the container giving MLPerf access to gpus
 docker run --gpus all -it --rm nvcr.io/nvidia/mlperf/mlperf-inference:mlpinf-v4.1-cuda12.4-pytorch24.04-ubuntu22.04-x86_64-release 
+apt update
+apt install -y python3-venv
 
 Set up MLCommons Automation Framework,
 python3 -m venv mlperf-venv
@@ -40,5 +43,4 @@ mlcr run-mlperf,inference,_find-performance,_full,_r5.0-dev \
    --scenario=Offline \
    --execution_mode=test \
    --device=cuda \
-   --docker --quiet \
-   --test_query_count=5000
+   --docker --quiet
