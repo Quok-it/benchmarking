@@ -110,6 +110,7 @@ int main() {
 
     // Compute GFLOPS (2 * SIZE^3 FLOPs per matrix multiplication)
     double gflops = (2.0 * SIZE * SIZE * SIZE) / (milliseconds * 1e6);
+    // Giga Floating Point Operations Per Second
     
     std::cout << "Matrix Size: " << SIZE << "x" << SIZE << std::endl;
     std::cout << "Execution Time: " << milliseconds << " ms" << std::endl;
