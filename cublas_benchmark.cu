@@ -39,9 +39,6 @@ void cublasErrorCheck(cublasStatus_t status, const char *file, int line)
     }
 }
 
-/** Function to check for errors in CUDA API calls */
-// Functions to ensure that CUDA and cuBLAS operations don't fail silently. If an error occurs, they print the error
-// then terminate the program
 void cudaErrorCheck(cudaError_t error, const char *file, int line)
 {
     if (error != cudaSuccess)
@@ -55,11 +52,6 @@ void cudaErrorCheck(cudaError_t error, const char *file, int line)
 void runCublas(cublasHandle_t handle, int M, int N, int K, float alpha,
     float *A, float *B, float beta, float *C)
 {
-// cuBLAS uses *column-major* order. So we change the order of our row-major A &
-// B, since (B^T*A^T)^T = (A*B)
-// cublasStatus_t ok = cublasGemmEx(handle, CUBLAS_OP_N, CUBLAS_OP_N, N, M, K, &alpha, B, CUDA_R_16F,
-//                                  N, A, CUDA_R_16F, K, &beta, C, CUDA_R_16F, N, /*CUBLAS_COMPUTE_16F*/ CUBLAS_COMPUTE_16F_PEDANTIC,
-//                                  CUBLAS_GEMM_DEFAULT);
 cublasStatus_t ok = cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, N, M, K, &alpha, B, N, A, K, &beta, C, N);
 cublasCheck(ok);
 }
@@ -78,7 +70,7 @@ int main() {
 
     // GEMM computes C = α*AB+β*C
 
-    // just do pure A*B (for simpler debugging)
+    // Just do pure A*B (for simpler debugging)
     float alpha = 1.0, beta = 1.0, initC = 1.0;
     float *A = nullptr, *B=nullptr, *C = nullptr, *C_ref = nullptr;     // host matrices
     float *dA = nullptr, *dB=nullptr, *dC = nullptr, *dC_ref = nullptr; // device matrices
@@ -90,7 +82,7 @@ int main() {
 
     randomize_matrix(A, SIZE * SIZE);
     randomize_matrix(B, SIZE * SIZE);
-    randomize_matrix(C, SIZE * SIZE);
+    // randomize_matrix(C, SIZE * SIZE);
 
     const_init_matrix(C, SIZE * SIZE, initC);
 
@@ -123,14 +115,12 @@ int main() {
     std::cout << "Execution Time: " << milliseconds << " ms" << std::endl;
     std::cout << "Performance: " << gflops << " GFLOPS" << std::endl;
 
-    // free CPU and GPU memory
+    // Free CPU and GPU memory
     free(A);
-    // free(B_T);
     free(B);
     free(C);
     free(C_ref);
     cudaCheck(cudaFree(dA));
-    // cudaCheck(cudaFree(dB_T));
     cudaCheck(cudaFree(dB));
     cudaCheck(cudaFree(dC));
     cudaCheck(cudaFree(dC_ref));
