@@ -47,13 +47,13 @@ void cudaErrorCheck(cudaError_t error, const char *file, int line)
                cudaGetErrorName(error), cudaGetErrorString(error));
         exit(EXIT_FAILURE);
     }
-};
+}
 
 void runCublas(cublasHandle_t handle, int M, int N, int K, float alpha,
     float *A, float *B, float beta, float *C)
 {
-cublasStatus_t ok = cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, N, M, K, &alpha, B, N, A, K, &beta, C, N);
-cublasCheck(ok);
+    cublasStatus_t ok = cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, N, M, K, &alpha, B, N, A, K, &beta, C, N);
+    cublasCheck(ok);
 }
 
 int main() {
@@ -70,7 +70,7 @@ int main() {
 
     // GEMM computes C = α*AB+β*C
 
-    // Just do pure A*B (for simpler debugging)
+    // Just do pure A*B+C (for simpler debugging)
     float alpha = 1.0, beta = 1.0, initC = 1.0;
     float *A = nullptr, *B=nullptr, *C = nullptr, *C_ref = nullptr;     // host matrices
     float *dA = nullptr, *dB=nullptr, *dC = nullptr, *dC_ref = nullptr; // device matrices
@@ -86,6 +86,7 @@ int main() {
 
     const_init_matrix(C, SIZE * SIZE, initC);
 
+    // A, B, C live in CPU, dA, dB, dC live in GPU
     cudaCheck(cudaMalloc((void **)&dA, sizeof(float) * SIZE * SIZE));
     cudaCheck(cudaMalloc((void **)&dB, sizeof(float) * SIZE * SIZE));
     cudaCheck(cudaMalloc((void **)&dC, sizeof(float) * SIZE * SIZE));
