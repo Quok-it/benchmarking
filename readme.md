@@ -1,16 +1,5 @@
-## Command to compile & run cublas_benchmark.cu
-"nvcc -o cublas_benchmark cublas_benchmark.cu -lcublas -lcudart"
-"./cublas_benchmark.exe"
-
 ## Strategy
 Do low-level benchmarking in C, to measure raw GPU performance and do high-level benchmarking in Python to test real-world training and inference. Use python to automate C++ compile & run.
-
-## Deep Learning benchmarks 
-Not sure why but I'm unable to run MLPerf, this is the error: ! call C:\Users\tarun\CM\repos\mlcommons@mlperf-automations\script\get-llvm\run.bat from tmp-run.bat
-The system cannot find the path specified.
-
-Trying using docker environment instead:
-https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html 
 
 ## MLPerf
 wsl --install
@@ -26,6 +15,10 @@ docker pull nvcr.io/nvidia/mlperf/mlperf-inference:mlpinf-v4.1-cuda12.4-pytorch2
 
 Run the container giving MLPerf access to gpus
 docker run --gpus all -it --rm nvcr.io/nvidia/mlperf/mlperf-inference:mlpinf-v4.1-cuda12.4-pytorch24.04-ubuntu22.04-x86_64-release 
+
+docker run --gpus all -it --rm --ipc=host --ulimit memlock=-1 --ulimit stack=67108864 \
+    nvcr.io/nvidia/mlperf/mlperf-inference:mlpinf-v4.1-cuda12.4-pytorch24.04-ubuntu22.04-x86_64-release
+
 apt update
 apt install -y python3-venv
 
@@ -35,12 +28,33 @@ source mlperf-venv/bin/activate
 pip install mlc-scripts
 
 Run MLPerf benchmark,
-mlcr run-mlperf,inference,_find-performance,_full,_r5.0-dev \
+mlcr run-mlperf,inference,_r5.0-dev \
    --model=resnet50 \
    --implementation=reference \
    --framework=onnxruntime \
    --category=edge \
    --scenario=Offline \
-   --execution_mode=test \
+   --execution_mode=valid \
    --device=cuda \
-   --docker --quiet
+   --quiet
+   
+   https://docs.mlcommons.org/inference/benchmarks/image_classification/resnet50/#__tabbed_8_1
+
+## AI Benchmarks
+https://pypi.org/project/ai-benchmark/ 
+ai-benchmark
+
+## CUBLAS Benchmark
+nvcc -o cublas_benchmark cublas_benchmark.cu -lcublas -lcudart
+./cublas_benchmark.exe
+
+## CUDNN Benchmarks
+nvcc cudnn_benchmark.cu -o cudnn_benchmark -lcudnn -lcuda -std=c++11
+./cudnn_benchmark.exe
+
+## Notes
+Not sure why but I'm unable to run MLPerf, this is the error: ! call C:\Users\tarun\CM\repos\mlcommons@mlperf-automations\script\get-llvm\run.bat from tmp-run.bat
+The system cannot find the path specified.
+
+Trying using docker environment instead:
+https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html 

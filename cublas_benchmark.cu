@@ -11,7 +11,7 @@ std::uniform_real_distribution<float> distribution(0, 1);
 #define cudaCheck(err) (cudaErrorCheck(err, __FILE__, __LINE__))
 #define cublasCheck(err) (cublasErrorCheck(err, __FILE__, __LINE__))
 
-#define SIZE 32
+#define SIZE 2048
 
 void randomize_matrix(float *mat, int N)
 {
@@ -72,17 +72,15 @@ int main() {
 
     // Just do pure A*B+C (for simpler debugging)
     float alpha = 1.0, beta = 1.0, initC = 1.0;
-    float *A = nullptr, *B=nullptr, *C = nullptr, *C_ref = nullptr;     // host matrices
-    float *dA = nullptr, *dB=nullptr, *dC = nullptr, *dC_ref = nullptr; // device matrices
+    float *A = nullptr, *B=nullptr, *C = nullptr;     // host matrices
+    float *dA = nullptr, *dB=nullptr, *dC = nullptr; // device matrices
 
     A = (float *)malloc(sizeof(float) * SIZE * SIZE);
     B = (float *)malloc(sizeof(float) * SIZE * SIZE);
     C = (float *)malloc(sizeof(float) * SIZE * SIZE);
-    C_ref = (float *)malloc(sizeof(float) * SIZE * SIZE);
 
     randomize_matrix(A, SIZE * SIZE);
     randomize_matrix(B, SIZE * SIZE);
-    // randomize_matrix(C, SIZE * SIZE);
 
     const_init_matrix(C, SIZE * SIZE, initC);
 
@@ -90,21 +88,22 @@ int main() {
     cudaCheck(cudaMalloc((void **)&dA, sizeof(float) * SIZE * SIZE));
     cudaCheck(cudaMalloc((void **)&dB, sizeof(float) * SIZE * SIZE));
     cudaCheck(cudaMalloc((void **)&dC, sizeof(float) * SIZE * SIZE));
-    cudaCheck(cudaMalloc((void **)&dC_ref, sizeof(float) * SIZE * SIZE));
 
     cudaCheck(cudaMemcpy(dA, A, sizeof(float) * SIZE * SIZE, cudaMemcpyHostToDevice));
     cudaCheck(cudaMemcpy(dB, B, sizeof(float) * SIZE * SIZE, cudaMemcpyHostToDevice));
     cudaCheck(cudaMemcpy(dC, C, sizeof(float) * SIZE * SIZE, cudaMemcpyHostToDevice));
-    cudaCheck(cudaMemcpy(dC_ref, C, sizeof(float) * SIZE * SIZE, cudaMemcpyHostToDevice));
 
     // Start timing
     cudaCheck(cudaEventRecord(start));
 
-    runCublas(handle, m, n, k, alpha, dA, dB, beta, dC_ref);
+    runCublas(handle, m, n, k, alpha, dA, dB, beta, dC);
 
     // Stop timing
     cudaCheck(cudaEventRecord(stop));
     cudaCheck(cudaEventSynchronize(stop));
+
+    // Copy result back to host
+    cudaMemcpy(C, dC, sizeof(float) * m * n, cudaMemcpyDeviceToHost);
 
     float milliseconds = 0;
     cudaCheck(cudaEventElapsedTime(&milliseconds, start, stop));
@@ -121,11 +120,9 @@ int main() {
     free(A);
     free(B);
     free(C);
-    free(C_ref);
     cudaCheck(cudaFree(dA));
     cudaCheck(cudaFree(dB));
     cudaCheck(cudaFree(dC));
-    cudaCheck(cudaFree(dC_ref));
     cublasCheck(cublasDestroy(handle));
 
     return 0;
