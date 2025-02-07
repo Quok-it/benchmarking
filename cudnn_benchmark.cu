@@ -7,11 +7,12 @@
 #include <fstream>
 #include <iomanip>
 
-#define MASK_WIDTH  5
-#define MASK_HEIGHT 5
-#define TILE_WIDTH 16
+// Constants
+#define SIZE 256
+#define MASK_WIDTH  3 // Note that mask refers to kernel
+#define MASK_HEIGHT 3
 
-// Function to pad the input matrix
+// Function to pad the input matrix - to ensure that the output has the same size as input
 void padInput(const std::vector<float>& input, std::vector<float>& paddedInput,
               int inputWidth, int inputHeight, int kernelWidth, int kernelHeight) {
     int padWidth = kernelWidth / 2;
@@ -50,11 +51,12 @@ void flipKernel(const std::vector<float>& kernel, std::vector<float>& flippedKer
 // Validate convolution with cuDNN
 float benchmarkConvolution(const std::vector<float>& input, std::vector<float>& output_cudnn,
                          const std::vector<float>& kernel, int inputWidth, int inputHeight,
-                         int kernelWidth, int kernelHeight, int stride) {
+                         int kernelWidth, int kernelHeight) {
     int paddedWidth = inputWidth + 2 * (kernelWidth / 2);
     int paddedHeight = inputHeight + 2 * (kernelHeight / 2);
     float *input_device, *kernel_device, *output_device;
     const float alpha = 1.0f, beta = 0.0f;
+    const int stride = 1;
 
     std::vector<float> flippedKernel(kernel.size());
     flipKernel(kernel, flippedKernel, kernelWidth, kernelHeight);
@@ -106,7 +108,6 @@ float benchmarkConvolution(const std::vector<float>& input, std::vector<float>& 
     cudaEventSynchronize(stop);
     float milliseconds = 0;
     cudaEventElapsedTime(&milliseconds, start, stop);
-    std::cout << "cuDNN Kernel Time: " << milliseconds << " ms" << std::endl;
     
     cudaMemcpy(output_cudnn.data(), output_device, inputWidth * inputHeight * sizeof(float), cudaMemcpyDeviceToHost);
     
@@ -172,11 +173,9 @@ float benchmarkPooling(cudnnHandle_t cudnn, cudnnTensorDescriptor_t inputDesc, c
 int main() {
     const int kernelWidth = MASK_WIDTH;
     const int kernelHeight = MASK_HEIGHT;
-    const int stride = 1;
-    const int size = 256;
 
-    const int inputWidth = size;
-    const int inputHeight = size;
+    const int inputWidth = SIZE;
+    const int inputHeight = SIZE;
     std::vector<float> input = generateRandomMatrix(inputWidth, inputHeight);
     std::vector<float> paddedInput;
     padInput(input, paddedInput, inputWidth, inputHeight, kernelWidth, kernelHeight);
@@ -195,12 +194,12 @@ int main() {
     cudaMalloc(&output_device, inputWidth * inputHeight * sizeof(float));
     cudaMemcpy(input_device, input.data(), inputWidth * inputHeight * sizeof(float), cudaMemcpyHostToDevice);
     
-    float cuDNN_time = benchmarkConvolution(paddedInput, output_cudnn, kernel, inputWidth, inputHeight, kernelWidth, kernelHeight, stride);
+    float cuDNN_time = benchmarkConvolution(paddedInput, output_cudnn, kernel, inputWidth, inputHeight, kernelWidth, kernelHeight);
     float activation_time = benchmarkActivation(cudnn, inputDesc, input_device, output_device, inputWidth * inputHeight);
     float pooling_time = benchmarkPooling(cudnn, inputDesc, inputDesc, input_device, output_device);
 
-    std::cout << "Matrix Size: " << size << "x" << size << "\n";
-    std::cout << "cuDNN Conv Time: " << cuDNN_time << " ms\n";
+    std::cout << "Matrix Size: " << SIZE << "x" << SIZE << "\n";
+    std::cout << "Conv Time: " << cuDNN_time << " ms\n";
     std::cout << "Activation Time: " << activation_time << " ms\n";
     std::cout << "Pooling Time: " << pooling_time << " ms\n";
     std::cout << "---------------------------------------------" << std::endl;
