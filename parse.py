@@ -6,48 +6,54 @@ def parse_benchmark_results(file_path):
         content = f.read()
 
     benchmark_data = {
-        "CUBLAS matrix size": None,
-        "CUBLAS execution time": None,
-        "CUBLAS performance": None,
-        "CuDNN matrix size": None,
-        "Convolution time": None,
-        "Activation time": None,
-        "Pooling time": None,
-        "MobileNet-V2": {},
-        "Inception-V3": {},
-        "Inception-V4": {},
-        "Inception-ResNet-V2": {},
-        "ResNet-V2-50": {},
-        "ResNet-V2-152": {},
-        "VGG-16": {},
-        "SRCNN 9-5-5": {},
-        "VGG-19 Super-Res": {},
-        "ResNet-SRGAN": {},
-        "ResNet-DPED": {},
-        "U-Net": {},
-        "Nvidia-SPADE": {},
-        "ICNet": {},
-        "PSPNet": {},
-        "DeepLab": {},
-        "Pixel-RNN": {}
+        "CUBLAS" : {
+            "Matrix size": None,
+            "Execution time": None,
+            "Performance": None,
+        },
+        "cuDNN" : {
+            "Matrix sizce": None,
+            "Convolution time": None,
+            "Activation time": None,
+            "Pooling time": None,   
+        },
+        "DL" : {
+            "MobileNet-V2": {},
+            "Inception-V3": {},
+            "Inception-V4": {},
+            "Inception-ResNet-V2": {},
+            "ResNet-V2-50": {},
+            "ResNet-V2-152": {},
+            "VGG-16": {},
+            "SRCNN 9-5-5": {},
+            "VGG-19 Super-Res": {},
+            "ResNet-SRGAN": {},
+            "ResNet-DPED": {},
+            "U-Net": {},
+            "Nvidia-SPADE": {},
+            "ICNet": {},
+            "PSPNet": {},
+            "DeepLab": {},
+            "Pixel-RNN": {}
+        }
     }
 
-    # Extract CUBLAS info
+    # Extract CUBLAS results
     cublas_match = re.search(r"Matrix Size: (\d+x\d+)\nExecution Time: ([\d.]+) ms\nPerformance: ([\d.]+) GFLOPS", content)
     if cublas_match:
-        benchmark_data["CUBLAS matrix size"] = cublas_match.group(1)
-        benchmark_data["CUBLAS execution time"] = float(cublas_match.group(2))
-        benchmark_data["CUBLAS performance"] = float(cublas_match.group(3))
+        benchmark_data["CUBLAS"]["Matrix size"] = cublas_match.group(1)
+        benchmark_data["CUBLAS"]["Execution time"] = float(cublas_match.group(2))
+        benchmark_data["CUBLAS"]["Performance"] = float(cublas_match.group(3))
 
-    # Extract CuDNN info
+    # Extract CuDNN results
     cudnn_match = re.search(r"Matrix Size: (\d+x\d+)\nConv Time: ([\d.]+) ms\nActivation Time: ([\d.]+) ms\nPooling Time: ([\d.]+) ms", content)
     if cudnn_match:
-        benchmark_data["CuDNN matrix size"] = cudnn_match.group(1)
-        benchmark_data["Convolution time"] = float(cudnn_match.group(2))
-        benchmark_data["Activation time"] = float(cudnn_match.group(3))
-        benchmark_data["Pooling time"] = float(cudnn_match.group(4))
+        benchmark_data["cuDNN"]["Matrix size"] = cudnn_match.group(1)
+        benchmark_data["cuDNN"]["Convolution time"] = float(cudnn_match.group(2))
+        benchmark_data["cuDNN"]["Activation time"] = float(cudnn_match.group(3))
+        benchmark_data["cuDNN"]["Pooling time"] = float(cudnn_match.group(4))
 
-    # Model performance parsing (previously correct approach)
+    # Extract Deep Learning results 
     model_pattern = re.compile(r"(\d+)/\d+\.\s([^\n]+)")
     inference_pattern = re.compile(r"(\d+\.\d) - inference \| batch=(\d+), size=(\d+x\d+): ([\d.]+) ± [\d.]+ ms")
     training_pattern = re.compile(r"(\d+\.\d) - training \| batch=(\d+), size=(\d+x\d+): ([\d.]+) ± [\d.]+ ms")
@@ -63,17 +69,17 @@ def parse_benchmark_results(file_path):
         training_match = training_pattern.match(line)
 
         if inference_match and current_model in benchmark_data:
-            benchmark_data[current_model]["inference"] = {
-                "batch_size": int(inference_match.group(2)),
-                "input_size": inference_match.group(3),
-                "time_ms": float(inference_match.group(4))
+            benchmark_data[current_model]["Inference"] = {
+                "Batch size": int(inference_match.group(2)),
+                "Input size": inference_match.group(3),
+                "Execution time": float(inference_match.group(4))
             }
 
         if training_match and current_model in benchmark_data:
-            benchmark_data[current_model]["training"] = {
-                "batch_size": int(training_match.group(2)),
-                "input_size": training_match.group(3),
-                "time_ms": float(training_match.group(4))
+            benchmark_data[current_model]["Training"] = {
+                "Batch size": int(training_match.group(2)),
+                "Input size": training_match.group(3),
+                "Execution time": float(training_match.group(4))
             }
 
     return benchmark_data
