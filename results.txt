@@ -1,0 +1,12 @@
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+cublas_benchmark.cu
+tmpxft_00002f78_00000000-10_cublas_benchmark.cudafe1.cpp
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+nvcc warning : The -std=c++11 flag is not supported with the configured host compiler. Flag will be ignored.
+cudnn_benchmark.cu
+
+>> Compiling CUBLAS Benchmark...
+CUBLAS Benchmark compiled successfully!
+
+>> Compiling CUDNN Benchmark...
+CUDNN Compilation failed: Command '['nvcc', '-o', 'cudnn_benchmark', 'cudnn_benchmark.cu', '-lcudnn', '-lcuda', '-std=c++11']' returned non-zero exit status 2.
