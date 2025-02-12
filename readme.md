@@ -42,7 +42,9 @@ mlcr run-mlperf,inference,_r5.0-dev \
 
 ## AI Benchmarks
 https://pypi.org/project/ai-benchmark/ 
-ai-benchmark
+ai-benchmark 
+or
+python ai_benchmark.py
 
 ## CUBLAS Benchmark
 nvcc -o cublas_benchmark cublas_benchmark.cu -lcublas -lcudart
