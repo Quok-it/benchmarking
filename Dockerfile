@@ -16,6 +16,9 @@ RUN apt update && apt install -y \
     git
 
 # RUN pip install numpy==1.23.5 
+# Install cuDNN
+RUN apt-get install -y --no-install-recommends \
+    libcudnn8 libcudnn8-dev
 
 # Install AI benchmark
 RUN pip install ai_benchmark
@@ -35,6 +38,9 @@ RUN nvcc -o cublas_benchmark cublas_benchmark.cu -lcublas -lcudart
 
 # Compile CUDNN benchmark
 RUN nvcc cudnn_benchmark.cu -o cudnn_benchmark -lcudnn -lcuda -std=c++11
+
+COPY main.py /benchmark/
+COPY parse.py /benchmark/
 
 # Set entrypoint script
 COPY entrypoint.sh /benchmark/entrypoint.sh
