@@ -1,5 +1,5 @@
 # Base image
-FROM nvidia/cuda:12.8.0-cudnn-devel-ubuntu22.04
+FROM nvidia/cuda:12.2.0-devel-ubuntu22.04
 
 # Set working directory
 WORKDIR /benchmark
