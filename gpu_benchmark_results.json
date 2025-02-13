@@ -1,0 +1,45 @@
+{
+    "CUBLAS": {
+        "Matrix size": null,
+        "Execution time": null,
+        "Performance": null
+    },
+    "cuDNN": {
+        "Matrix size": null,
+        "Convolution time": null,
+        "Activation time": null,
+        "Pooling time": null
+    },
+    "DL": {
+        "MobileNet-V2": {
+            "Inference time": 365.0,
+            "Training time": 1561.0
+        },
+        "Inception-V3": {
+            "Inference time": 1865.0,
+            "Training time": 6426.0
+        },
+        "Inception-V4": {
+            "Inference time": 1954.0,
+            "Training time": 6803.0
+        },
+        "Inception-ResNet-V2": {
+            "Inference time": 2231.0,
+            "Training time": 6596.0
+        },
+        "ResNet-V2-50": {
+            "Inference time": 1056.0,
+            "Training time": 3767.0
+        },
+        "ResNet-V2-152": {
+            "Inference time": 1738.0,
+            "Training time": 5321.0
+        },
+        "VGG-16": {},
+        "Nvidia-SPADE": {},
+        "ICNet": {},
+        "PSPNet": {},
+        "DeepLab": {},
+        "Pixel-RNN": {}
+    }
+}

@@ -1,12 +1,45 @@
-nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
-cublas_benchmark.cu
-tmpxft_00002f78_00000000-10_cublas_benchmark.cudafe1.cpp
-nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
-nvcc warning : The -std=c++11 flag is not supported with the configured host compiler. Flag will be ignored.
-cudnn_benchmark.cu
 
->> Compiling CUBLAS Benchmark...
-CUBLAS Benchmark compiled successfully!
+>>   AI-Benchmark-v.0.1.2   
+>>   Let the AI Games begin..
 
->> Compiling CUDNN Benchmark...
-CUDNN Compilation failed: Command '['nvcc', '-o', 'cudnn_benchmark', 'cudnn_benchmark.cu', '-lcudnn', '-lcuda', '-std=c++11']' returned non-zero exit status 2.
+*  TF Version: 2.18.0
+*  Platform: Windows-11-10.0.22631-SP0
+*  CPU: N/A
+*  CPU RAM: 16 GB
+
+The benchmark is running...
+The tests might take up to 20 minutes
+Please don't interrupt the script
+
+1/19. MobileNet-V2
+
+1.1 - inference | batch=50, size=224x224: 365 ± 40 ms
+1.2 - training  | batch=50, size=224x224: 1561 ± 165 ms
+
+2/19. Inception-V3
+
+2.1 - inference | batch=20, size=346x346: 1865 ± 232 ms
+2.2 - training  | batch=20, size=346x346: 6426 ± 56 ms
+
+3/19. Inception-V4
+
+3.1 - inference | batch=10, size=346x346: 1954 ± 94 ms
+3.2 - training  | batch=10, size=346x346: 6803 ± 240 ms
+
+4/19. Inception-ResNet-V2
+
+4.1 - inference | batch=10, size=346x346: 2231 ± 142 ms
+4.2 - training  | batch=8, size=346x346: 6596 ± 654 ms
+
+5/19. ResNet-V2-50
+
+5.1 - inference | batch=10, size=346x346: 1056 ± 131 ms
+5.2 - training  | batch=10, size=346x346: 3767 ± 408 ms
+
+6/19. ResNet-V2-152
+
+6.1 - inference | batch=10, size=256x256: 1738 ± 106 ms
+6.2 - training  | batch=10, size=256x256: 5321 ± 274 ms
+
+7/19. VGG-16
+

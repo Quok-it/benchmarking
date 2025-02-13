@@ -18,54 +18,18 @@ def parse_benchmark_results(file_path):
             "Pooling time": None,   
         },
         "DL" : {
-            "MobileNet-V2": {
-                "Inference time": None,
-                "Training time": None
-                },
-            "Inception-V3": {
-                "Inference time": None,
-                "Training time": None
-                },
-            "Inception-V4": {
-                "Inference time": None,
-                "Training time": None
-                },
-            "Inception-ResNet-V2": {
-                "Inference time": None,
-                "Training time": None
-                },
-            "ResNet-V2-50": {
-                "Inference time": None,
-                "Training time": None
-                },
-            "ResNet-V2-152": {
-                "Inference time": None,
-                "Training time": None
-                },
-            "VGG-16": {
-                "Inference time": None,
-                "Training time": None
-                },
-            "Nvidia-SPADE": {
-                "Inference time": None,
-                "Training time": None
-                },
-            "ICNet": {
-                "Inference time": None,
-                "Training time": None
-                },
-            "PSPNet": {
-                "Inference time": None,
-                "Training time": None
-                },
-            "DeepLab": {
-                "Inference time": None,
-                "Training time": None
-                },
-            "Pixel-RNN": {
-                "Inference time": None,
-                "Training time": None
-                },
+            "MobileNet-V2": {},
+            "Inception-V3": {},
+            "Inception-V4": {},
+            "Inception-ResNet-V2": {},
+            "ResNet-V2-50": {},
+            "ResNet-V2-152": {},
+            "VGG-16": {},
+            "Nvidia-SPADE": {},
+            "ICNet": {},
+            "PSPNet": {},
+            "DeepLab": {},
+            "Pixel-RNN": {},
         }
     }
 
@@ -87,8 +51,7 @@ def parse_benchmark_results(file_path):
     # Extract Deep Learning results 
     model_pattern = re.compile(r"(\d+)/\d+\.\s([^\n]+)")
     inference_pattern = re.compile(r"(\d+\.\d) - inference \| batch=(\d+), size=(\d+x\d+): ([\d.]+) ± [\d.]+ ms")
-    training_pattern = re.compile(r"(\d+\.\d) - training \| batch=(\d+), size=(\d+x\d+): ([\d.]+) ± [\d.]+ ms")
-
+    training_pattern = re.compile(r"(\d+\.\d) - training  \| batch=(\d+), size=(\d+x\d+): ([\d.]+) ± [\d.]+ ms")
     current_model = None
 
     for line in content.split("\n"):
@@ -101,7 +64,6 @@ def parse_benchmark_results(file_path):
 
         if inference_match and current_model in benchmark_data["DL"]:
             benchmark_data["DL"][current_model]["Inference time"] = float(inference_match.group(4))
-
         if training_match and current_model in benchmark_data["DL"]:
             benchmark_data["DL"][current_model]["Training time"] = float(training_match.group(4))
 
