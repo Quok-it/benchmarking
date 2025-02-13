@@ -15,7 +15,10 @@ RUN apt update && apt install -y \
     sudo \
     git
 
+# Install basic dependencies
 # RUN pip install numpy==1.23.5 
+RUN pip install --no-cache-dir pandas openpyxl
+
 # Install cuDNN
 RUN apt-get install -y --no-install-recommends \
     libcudnn8 libcudnn8-dev
@@ -29,6 +32,7 @@ RUN pip install --no-cache-dir tensorflow[and-cuda]
 
 # Copy AI benchmark script into the container
 COPY ai_benchmark.py /benchmark/
+COPY ai-benchmark-results.xlsx /benchmark/
 
 # Copy CUBLAS and CUDNN benchmark scripts
 COPY cublas_benchmark.cu cudnn_benchmark.cu /benchmark/
@@ -41,6 +45,8 @@ RUN nvcc cudnn_benchmark.cu -o cudnn_benchmark -lcudnn -lcuda -std=c++11
 
 COPY main.py /benchmark/
 COPY parse.py /benchmark/
+COPY gpu_sanity_check.py /benchmark/
+COPY ai-benchmark-results.py /benchmark/
 
 # Set entrypoint script
 COPY entrypoint.sh /benchmark/entrypoint.sh
