@@ -12,29 +12,60 @@ def parse_benchmark_results(file_path):
             "Performance": None,
         },
         "cuDNN" : {
-            "Matrix sizce": None,
+            "Matrix size": None,
             "Convolution time": None,
             "Activation time": None,
             "Pooling time": None,   
         },
         "DL" : {
-            "MobileNet-V2": {},
-            "Inception-V3": {},
-            "Inception-V4": {},
-            "Inception-ResNet-V2": {},
-            "ResNet-V2-50": {},
-            "ResNet-V2-152": {},
-            "VGG-16": {},
-            "SRCNN 9-5-5": {},
-            "VGG-19 Super-Res": {},
-            "ResNet-SRGAN": {},
-            "ResNet-DPED": {},
-            "U-Net": {},
-            "Nvidia-SPADE": {},
-            "ICNet": {},
-            "PSPNet": {},
-            "DeepLab": {},
-            "Pixel-RNN": {}
+            "MobileNet-V2": {
+                "Inference time": None,
+                "Training time": None
+                },
+            "Inception-V3": {
+                "Inference time": None,
+                "Training time": None
+                },
+            "Inception-V4": {
+                "Inference time": None,
+                "Training time": None
+                },
+            "Inception-ResNet-V2": {
+                "Inference time": None,
+                "Training time": None
+                },
+            "ResNet-V2-50": {
+                "Inference time": None,
+                "Training time": None
+                },
+            "ResNet-V2-152": {
+                "Inference time": None,
+                "Training time": None
+                },
+            "VGG-16": {
+                "Inference time": None,
+                "Training time": None
+                },
+            "Nvidia-SPADE": {
+                "Inference time": None,
+                "Training time": None
+                },
+            "ICNet": {
+                "Inference time": None,
+                "Training time": None
+                },
+            "PSPNet": {
+                "Inference time": None,
+                "Training time": None
+                },
+            "DeepLab": {
+                "Inference time": None,
+                "Training time": None
+                },
+            "Pixel-RNN": {
+                "Inference time": None,
+                "Training time": None
+                },
         }
     }
 
@@ -68,22 +99,13 @@ def parse_benchmark_results(file_path):
         inference_match = inference_pattern.match(line)
         training_match = training_pattern.match(line)
 
-        if inference_match and current_model in benchmark_data:
-            benchmark_data[current_model]["Inference"] = {
-                "Batch size": int(inference_match.group(2)),
-                "Input size": inference_match.group(3),
-                "Execution time": float(inference_match.group(4))
-            }
+        if inference_match and current_model in benchmark_data["DL"]:
+            benchmark_data["DL"][current_model]["Inference time"] = float(inference_match.group(4))
 
-        if training_match and current_model in benchmark_data:
-            benchmark_data[current_model]["Training"] = {
-                "Batch size": int(training_match.group(2)),
-                "Input size": training_match.group(3),
-                "Execution time": float(training_match.group(4))
-            }
+        if training_match and current_model in benchmark_data["DL"]:
+            benchmark_data["DL"][current_model]["Training time"] = float(training_match.group(4))
 
     return benchmark_data
-
 
 # Example usage:
 file_path = "results.txt"  # Update with your actual file path
