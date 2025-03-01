@@ -17,7 +17,7 @@ RUN apt update && apt install -y \
 
 # Install basic dependencies
 # RUN pip install numpy==1.23.5 
-RUN pip install --no-cache-dir pandas openpyxl
+RUN pip install --no-cache-dir pandas openpyxl pymongo
 
 # Install cuDNN
 RUN apt-get install -y --no-install-recommends \
