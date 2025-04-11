@@ -1,38 +1,36 @@
 import re
 import json
 import os
-import pymongo
-from pymongo import MongoClient
+import psycopg2
 from datetime import datetime, timezone
+import subprocess
 
-# connect to MongoDB Atlas
-mongo_uri = "mongodb+srv://shemilyshen:3g6wfTcdh7HS9ZGF@quokmvp.y18rg.mongodb.net/?retryWrites=true&w=majority&appName=QuokMVP"
-if not mongo_uri:
-    raise ValueError(f"MongoDB URI is not set in environment variables.")
+# Connect to Postgres database
+conn = psycopg2.connect(
+    dbname="senior_design",
+    user="postgres",
+    password="quokit2025!",
+    host="backend-postresql.cmfkgwq6gehx.us-east-1.rds.amazonaws.com"
+)
 
-try:
-    client = MongoClient(mongo_uri)
-    db = client["gpu_monitoring"]
-    client.admin.command('ping')  # Ensure connection is live
-except pymongo.errors.PyMongoError as e:
-    exit(1)
+cursor = conn.cursor()
 
 def parse_benchmark_results(file_path):
-    with open(file_path, 'r') as f:
+    with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
         content = f.read()
 
     benchmark_data = {
-        "CUBLAS" : {
-            "Matrix size": None,
-            "Execution time": None,
-            "Performance": None,
-        },
-        "cuDNN" : {
-            "Matrix size": None,
-            "Convolution time": None,
-            "Activation time": None,
-            "Pooling time": None,   
-        },
+        # "CUBLAS" : {
+        #     "Matrix size": None,
+        #     "Execution time": None,
+        #     "Performance": None,
+        # },
+        # "cuDNN" : {
+        #     "Matrix size": None,
+        #     "Convolution time": None,
+        #     "Activation time": None,
+        #     "Pooling time": None,   
+        # },
         "DL" : {
             "MobileNet-V2": {},
             "Inception-V3": {},
@@ -50,24 +48,24 @@ def parse_benchmark_results(file_path):
     }
 
     # Extract CUBLAS results
-    cublas_match = re.search(r"Matrix Size: (\d+x\d+)\nExecution Time: ([\d.]+) ms\nPerformance: ([\d.]+) GFLOPS", content)
-    if cublas_match:
-        benchmark_data["CUBLAS"]["Matrix size"] = cublas_match.group(1)
-        benchmark_data["CUBLAS"]["Execution time"] = float(cublas_match.group(2))
-        benchmark_data["CUBLAS"]["Performance"] = float(cublas_match.group(3))
+    # cublas_match = re.search(r"Matrix Size: (\d+x\d+)\nExecution Time: ([\d.]+) ms\nPerformance: ([\d.]+) GFLOPS", content)
+    # if cublas_match:
+    #     benchmark_data["CUBLAS"]["Matrix size"] = cublas_match.group(1)
+    #     benchmark_data["CUBLAS"]["Execution time"] = float(cublas_match.group(2))
+    #     benchmark_data["CUBLAS"]["Performance"] = float(cublas_match.group(3))
 
-    # Extract CuDNN results
-    cudnn_match = re.search(r"Matrix Size: (\d+x\d+)\nConv Time: ([\d.]+) ms\nActivation Time: ([\d.]+) ms\nPooling Time: ([\d.]+) ms", content)
-    if cudnn_match:
-        benchmark_data["cuDNN"]["Matrix size"] = cudnn_match.group(1)
-        benchmark_data["cuDNN"]["Convolution time"] = float(cudnn_match.group(2))
-        benchmark_data["cuDNN"]["Activation time"] = float(cudnn_match.group(3))
-        benchmark_data["cuDNN"]["Pooling time"] = float(cudnn_match.group(4))
+    # # Extract CuDNN results
+    # cudnn_match = re.search(r"Matrix Size: (\d+x\d+)\nConv Time: ([\d.]+) ms\nActivation Time: ([\d.]+) ms\nPooling Time: ([\d.]+) ms", content)
+    # if cudnn_match:
+    #     benchmark_data["cuDNN"]["Matrix size"] = cudnn_match.group(1)
+    #     benchmark_data["cuDNN"]["Convolution time"] = float(cudnn_match.group(2))
+    #     benchmark_data["cuDNN"]["Activation time"] = float(cudnn_match.group(3))
+    #     benchmark_data["cuDNN"]["Pooling time"] = float(cudnn_match.group(4))
 
     # Extract Deep Learning results 
     model_pattern = re.compile(r"(\d+)/\d+\.\s([^\n]+)")
-    inference_pattern = re.compile(r"(\d+\.\d) - inference \| batch=(\d+), size=(\d+x\d+): ([\d.]+) ± [\d.]+ ms")
-    training_pattern = re.compile(r"(\d+\.\d) - training  \| batch=(\d+), size=(\d+x\d+): ([\d.]+) ± [\d.]+ ms")
+    inference_pattern = re.compile(r"\d+\.\d - inference \| batch=(\d+), size=(\d+x\d+): ([\d.]+).*ms")
+    training_pattern = re.compile(r"\d+\.\d - training\s+\| batch=(\d+), size=(\d+x\d+): ([\d.]+).*ms")
     current_model = None
 
     for line in content.split("\n"):
@@ -79,10 +77,10 @@ def parse_benchmark_results(file_path):
         training_match = training_pattern.match(line)
 
         if inference_match and current_model in benchmark_data["DL"]:
-            benchmark_data["DL"][current_model]["Inference time"] = float(inference_match.group(4))
+            benchmark_data["DL"][current_model]["Inference time"] = float(inference_match.group(3))
         if training_match and current_model in benchmark_data["DL"]:
-            benchmark_data["DL"][current_model]["Training time"] = float(training_match.group(4))
-
+            benchmark_data["DL"][current_model]["Training time"] = float(training_match.group(3))
+    
     return benchmark_data
 
 def store_benchmark_results(file_path):
@@ -94,15 +92,37 @@ def store_benchmark_results(file_path):
     timestamp = datetime.now(timezone.utc)
     unix_time = timestamp.timestamp()
 
-    # benchmark_results["timestamp"] = timestamp.isoformat()
-    # benchmark_results["unix_time"] = unix_time
+    def get_gpu_uuids():
+        try:
+            output = subprocess.check_output(
+                ["nvidia-smi", "--query-gpu=uuid", "--format=csv,noheader"],
+                text=True
+            ).strip()
+            uuids = output.splitlines()
+            return uuids
+        except subprocess.CalledProcessError as e:
+            print("Failed to query GPU UUIDs:", e)
+            return []
 
-    # Insert into MongoDB collection
-    result = db.benchmark_results.update_one(
-        {"timestamp": timestamp.isoformat(), "unix_time": unix_time},
-        {"$set": {
-            "benchmark_results": benchmark_results
-        }}, upsert=True)
+    gpu_uuid = get_gpu_uuids()[0] if get_gpu_uuids() else "unknown"
+    try:
+        cursor.execute("""
+            INSERT INTO benchmarks (gpu_uuid, timestamp, benchmark_data)
+            VALUES (%s, %s, %s)
+            ON CONFLICT (gpu_uuid, timestamp) DO NOTHING;
+        """, (
+            gpu_uuid,
+            timestamp,
+            json.dumps(benchmark_results)
+        ))
+        conn.commit()
+        print("Benchmark results inserted.")
+    except Exception as e:
+        print("Error inserting into PostgreSQL:", e)
+        conn.rollback()
+    finally:
+        cursor.close()
+        conn.close()
     
 
 # Example usage:
