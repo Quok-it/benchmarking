@@ -15,7 +15,7 @@ pip3 install --no-cache-dir pandas openpyxl
 
 echo "Installing AI Benchmark..."
 pip3 install ai_benchmark
-sed -i '/np.warnings.filterwarnings/d' /usr/local/lib/python3.12/site-packages/ai_benchmark/__init__.py
+sed -i '/np.warnings.filterwarnings/d' /.venv/lib/python3.12/site-packages/ai_benchmark/__init__.py
 
 echo "Installing TensorFlow optimized for CUDA..."
 pip3 install --no-cache-dir tensorflow[and-cuda]
