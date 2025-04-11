@@ -36,19 +36,20 @@ def run_cudnn():
 def run_ai_benchmark():
     print("\n>> Running AI Benchmark...")
     try:
-        subprocess.run(["ai-benchmark"], check=True)
+        subprocess.run(["python", "run_ai_benchmark.py"], check=True)
     except subprocess.CalledProcessError as e:
         print(f"AI Benchmark failed: {e}")
 
 if __name__ == "__main__":
     # Ensure GPU memory growth is enabled
     os.environ["TF_FORCE_GPU_ALLOW_GROWTH"] = "true"
-
+    
     # Compile benchmarks
     compile_cublas()
-    compile_cudnn()
+    # compile_cudnn()
 
     # Run benchmarks
     run_cublas()
-    run_cudnn()
+    # run_cudnn()
     run_ai_benchmark()
+
