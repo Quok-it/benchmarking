@@ -15,6 +15,8 @@ source mlc/bin/activate
 pip install --upgrade pip
 pip install mlc-scripts
 pip install cmx4mlperf
+pip install --no-cache-dir pymongo
+pip install python-dotenv
 
 # Install mlperf environment
 mlcr install,python-venv --name=mlperf
@@ -26,13 +28,13 @@ export MLC_SCRIPT_EXTRA_CMD="--adr.python.name=mlperf"
 cr run-mlperf,inference,_find-performance,_full,_r5.0-dev \
    --model=resnet50 \
    --implementation=reference \
-   --framework=pytorch \
+   --framework=tensorflow \
    --category=edge \
    --scenario=Offline \
    --execution_mode=test \
    --device=cuda  \
    --quiet \
-   --test_query_count=5000
+   --test_query_count=5000 > /dev/null 2>&1
 
 # Run Stable Diffusion MLPerf inference test
 cr run-mlperf,inference,_find-performance,_full,_r5.0-dev \
@@ -44,19 +46,7 @@ cr run-mlperf,inference,_find-performance,_full,_r5.0-dev \
    --execution_mode=test \
    --device=cuda  \
    --quiet \
-   --test_query_count=50
-
-# Run 3D-UNet MLPerf inference test
-cr run-mlperf,inference,_find-performance,_full,_r5.0-dev \
-   --model=3d-unet-99 \
-   --implementation=reference \
-   --framework=pytorch \
-   --category=edge \
-   --scenario=Offline \
-   --execution_mode=test \
-   --device=cuda  \
-   --quiet \
-   --test_query_count=50
+   --test_query_count=50 > /dev/null 2>&1
 
 # Run BERT MLPerf inference test
 cr run-mlperf,inference,_find-performance,_full,_r5.0-dev \
@@ -68,9 +58,9 @@ cr run-mlperf,inference,_find-performance,_full,_r5.0-dev \
     --execution_mode=test \
     --device=cuda  \
     --quiet \
-    --test_query_count=500
+    --test_query_count=500 > /dev/null 2>&1
 
-# Run LLaMA MLPerf inference test (not available on edge GPUs)
+python3 parse.py
 
 # Deactivate the virtual environment
 deactivate
