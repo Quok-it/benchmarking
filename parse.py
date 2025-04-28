@@ -1,130 +1,109 @@
-import re
-import json
 import os
-import psycopg2
+import pymongo
+from pymongo import MongoClient
 from datetime import datetime, timezone
-import subprocess
+import glob
+from dotenv import load_dotenv
 
-# Connect to Postgres database
-conn = psycopg2.connect(
-    dbname="senior_design",
-    user="postgres",
-    password="quokit2025!",
-    host="backend-postresql.cmfkgwq6gehx.us-east-1.rds.amazonaws.com"
-)
+load_dotenv()
 
-cursor = conn.cursor()
+# Setup MongoDB connection
+try:
+    client = MongoClient(os.environ["MONGODB_URI"])
+    db = client["gpu_monitoring"]
+    client.admin.command('ping')  # Ensure connection is live
+except pymongo.errors.PyMongoError as e:
+    print(f"MongoDB connection error: {e}")
+    exit(1)
 
-def parse_benchmark_results(file_path):
-    with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
-        content = f.read()
+def parse_mlperf_result(file_path, model_name):
+    samples_per_sec = None
+    mean_latency_ns = None
 
-    benchmark_data = {
-        # "CUBLAS" : {
-        #     "Matrix size": None,
-        #     "Execution time": None,
-        #     "Performance": None,
-        # },
-        # "cuDNN" : {
-        #     "Matrix size": None,
-        #     "Convolution time": None,
-        #     "Activation time": None,
-        #     "Pooling time": None,   
-        # },
-        "DL" : {
-            "MobileNet-V2": {},
-            "Inception-V3": {},
-            "Inception-V4": {},
-            "Inception-ResNet-V2": {},
-            "ResNet-V2-50": {},
-            "ResNet-V2-152": {},
-            "VGG-16": {},
-            "Nvidia-SPADE": {},
-            "ICNet": {},
-            "PSPNet": {},
-            "DeepLab": {},
-            "Pixel-RNN": {},
-        }
-    }
+    with open(file_path, 'r') as f:
+        for line in f:
+            if "Samples per second" in line:
+                samples_per_sec = float(line.strip().split(":")[1])
+            if "Mean latency (ns)" in line:
+                mean_latency_ns = float(line.strip().split(":")[1])
 
-    # Extract CUBLAS results
-    # cublas_match = re.search(r"Matrix Size: (\d+x\d+)\nExecution Time: ([\d.]+) ms\nPerformance: ([\d.]+) GFLOPS", content)
-    # if cublas_match:
-    #     benchmark_data["CUBLAS"]["Matrix size"] = cublas_match.group(1)
-    #     benchmark_data["CUBLAS"]["Execution time"] = float(cublas_match.group(2))
-    #     benchmark_data["CUBLAS"]["Performance"] = float(cublas_match.group(3))
+    if samples_per_sec is None or mean_latency_ns is None:
+        raise ValueError(f"Could not find required fields in {file_path}")
 
-    # # Extract CuDNN results
-    # cudnn_match = re.search(r"Matrix Size: (\d+x\d+)\nConv Time: ([\d.]+) ms\nActivation Time: ([\d.]+) ms\nPooling Time: ([\d.]+) ms", content)
-    # if cudnn_match:
-    #     benchmark_data["cuDNN"]["Matrix size"] = cudnn_match.group(1)
-    #     benchmark_data["cuDNN"]["Convolution time"] = float(cudnn_match.group(2))
-    #     benchmark_data["cuDNN"]["Activation time"] = float(cudnn_match.group(3))
-    #     benchmark_data["cuDNN"]["Pooling time"] = float(cudnn_match.group(4))
+    mean_latency_sec = mean_latency_ns / 1e9
 
-    # Extract Deep Learning results 
-    model_pattern = re.compile(r"(\d+)/\d+\.\s([^\n]+)")
-    inference_pattern = re.compile(r"\d+\.\d - inference \| batch=(\d+), size=(\d+x\d+): ([\d.]+).*ms")
-    training_pattern = re.compile(r"\d+\.\d - training\s+\| batch=(\d+), size=(\d+x\d+): ([\d.]+).*ms")
-    current_model = None
+    print(f"Model: {model_name}")
+    print(f"  - Samples per second: {samples_per_sec:.3f} samples/sec")
+    print(f"  - Mean latency: {mean_latency_ns:.0f} ns ({mean_latency_sec:.3f} seconds)")
 
-    for line in content.split("\n"):
-        model_match = model_pattern.match(line)
-        if model_match:
-            current_model = model_match.group(2).strip()
-        
-        inference_match = inference_pattern.match(line)
-        training_match = training_pattern.match(line)
+    return samples_per_sec, mean_latency_sec
 
-        if inference_match and current_model in benchmark_data["DL"]:
-            benchmark_data["DL"][current_model]["Inference time"] = float(inference_match.group(3))
-        if training_match and current_model in benchmark_data["DL"]:
-            benchmark_data["DL"][current_model]["Training time"] = float(training_match.group(3))
+def find_latest_run(model_dirs):
+    """Find the latest mlperf_log_summary.txt across multiple test_results"""
+    latest_summary = None
+    latest_mtime = -1
+
+    for model_dir in model_dirs:
+        offline_perf_dir = os.path.join(model_dir, "offline/performance")
+        run_dirs = glob.glob(os.path.join(offline_perf_dir, "run_*"))
+        for run_dir in run_dirs:
+            summary_path = os.path.join(run_dir, "mlperf_log_summary.txt")
+            if os.path.exists(summary_path):
+                mtime = os.path.getmtime(summary_path)
+                if mtime > latest_mtime:
+                    latest_summary = summary_path
+                    latest_mtime = mtime
+
+    if latest_summary is None:
+        raise ValueError("No mlperf_log_summary.txt found for model.")
     
-    return benchmark_data
+    return latest_summary
 
-def store_benchmark_results(file_path):
-    """ Parses the benchmark results and stores them in MongoDB. """
-    benchmark_results = parse_benchmark_results(file_path)
-    print(json.dumps(benchmark_results, indent=4))
+def find_all_test_result_paths():
+    cache_dir = os.path.expanduser("~/MLC/repos/local/cache/")
+    candidates = glob.glob(os.path.join(cache_dir, "get-mlperf-inference-results-*"))
+    if not candidates:
+        raise ValueError(f"No get-mlperf-inference-results-* directories found in {cache_dir}")
+    if len(candidates) > 1:
+        raise ValueError(f"Multiple get-mlperf-inference-results-* directories found, please clean up: {candidates}")
 
-    # Add metadata (timestamp & Unix time)
+    results_root = candidates[0]
+    test_results_dirs = glob.glob(os.path.join(results_root, "test_results/*"))
+    if not test_results_dirs:
+        raise ValueError(f"No test_results found under {results_root}")
+
+    print(f"Auto-detected {len(test_results_dirs)} test_results folders under {results_root}")
+    return test_results_dirs
+
+if __name__ == "__main__":
+    test_results_dirs = find_all_test_result_paths()
+
+    models_list = ["resnet50", "stable-diffusion-xl", "bert-99"]
+
+    benchmark_results = {}
+
+    for model_name in models_list:
+        try:
+            model_dirs = [os.path.join(test_result_dir, model_name) for test_result_dir in test_results_dirs]
+            summary_file = find_latest_run(model_dirs)
+            samples_per_sec, mean_latency_sec = parse_mlperf_result(summary_file, model_name)
+
+            benchmark_results[model_name] = {
+                "Samples per second": samples_per_sec,
+                "Mean latency (seconds)": mean_latency_sec
+            }
+        except Exception as e:
+            print(f"Error processing {model_name}: {e}")
+
     timestamp = datetime.now(timezone.utc)
     unix_time = timestamp.timestamp()
 
-    def get_gpu_uuids():
-        try:
-            output = subprocess.check_output(
-                ["nvidia-smi", "--query-gpu=uuid", "--format=csv,noheader"],
-                text=True
-            ).strip()
-            uuids = output.splitlines()
-            return uuids
-        except subprocess.CalledProcessError as e:
-            print("Failed to query GPU UUIDs:", e)
-            return []
+    # Insert into MongoDB
+    result_doc = {
+        "timestamp": timestamp.isoformat(),
+        "unix_time": unix_time,
+        "benchmark_results": benchmark_results
+    }
 
-    gpu_uuid = get_gpu_uuids()[0] if get_gpu_uuids() else "unknown"
-    try:
-        cursor.execute("""
-            INSERT INTO benchmarks (gpu_uuid, timestamp, benchmark_data)
-            VALUES (%s, %s, %s)
-            ON CONFLICT (gpu_uuid, timestamp) DO NOTHING;
-        """, (
-            gpu_uuid,
-            timestamp,
-            json.dumps(benchmark_results)
-        ))
-        conn.commit()
-        print("Benchmark results inserted.")
-    except Exception as e:
-        print("Error inserting into PostgreSQL:", e)
-        conn.rollback()
-    finally:
-        cursor.close()
-        conn.close()
-    
-
-# Example usage:
-file_path = "results.txt"  # Update with your actual file path
-store_benchmark_results(file_path)
+    result = db.benchmark_results.insert_one(result_doc)
+    # print(f"Inserted benchmark results with _id: {result.inserted_id}")
