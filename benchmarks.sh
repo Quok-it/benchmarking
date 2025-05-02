@@ -1,12 +1,16 @@
 #!/bin/bash
 
-sudo apt-get update > /dev/null 2>&1
-sudo apt-get install -y python3.10-venv > /dev/null 2>&1
-sudo apt-get install -y python3-pip > /dev/null 2>&1
+sudo apt-get update
+sudo apt-get install -y python3.10-venv
+sudo apt-get install -y python3-pip
 sudo apt-get install -y --no-install-recommends \
-    libcudnn8 libcudnn8-dev > /dev/null 2>&1
-sudo apt install -y unzip wget curl > /dev/null 2>&1
+    libcudnn8 libcudnn8-dev
+sudo apt install -y unzip wget curl
 
+chmod +x mlperf_benchmark_datacenter.sh
+chmod +x gpu_burn.sh
+# chmod +x graphics_benchmark.sh
+chmod +x nvidia_hpc_benchmark.sh
 ./mlperf_benchmark_datacenter.sh
 ./gpu_burn.sh
 # ./graphics_benchmark.sh
