@@ -75,6 +75,137 @@ def find_all_test_result_paths():
     print(f"Auto-detected {len(test_results_dirs)} test_results folders under {results_root}")
     return test_results_dirs
 
+def parse_gpu_status(file_path):
+    with open(file_path, 'r') as f:
+            lines = f.readlines()
+        else:
+            lines = sys.stdin.readlines()
+    gpu_status = {}
+    pattern = re.compile(r'GPU\s+(\d+):\s*(OK|FAIL|ERROR|.*)', re.IGNORECASE)
+    for line in lines:
+        match = pattern.search(line)
+        if match:
+            gpu_id = int(match.group(1))
+            status = match.group(2).strip().upper()
+            gpu_status[gpu_id] = status
+    return gpu_status
+
+def parse_hpl_output(filepath: str) -> Dict:
+    results = {
+        "accuracy": {},
+        "performance": {}
+    }
+
+    with open(filepath, 'r') as file:
+        content = file.read()
+
+    # Extract main test result
+    final_perf_match = re.search(r'WC0\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+([\d.]+)\s+([\d.eE+-]+)', content)
+    if final_perf_match:
+        results["performance"] = {
+            "N": int(final_perf_match.group(1)),
+            "NB": int(final_perf_match.group(2)),
+            "P": int(final_perf_match.group(3)),
+            "Q": int(final_perf_match.group(4)),
+            "time_sec": float(final_perf_match.group(5)),
+            "gflops": float(final_perf_match.group(6))
+        }
+
+    # Extract residuals
+    residual_match = re.search(r'\|\|Ax-b\|\|_oo.*?=\s+([\deE.+-]+).*?PASSED.*?\|\|A\|\|_oo.*?=\s+([\deE.+-]+).*?\|\|x\|\|_oo.*?=\s+([\deE.+-]+).*?\|\|b\|\|_oo.*?=\s+([\deE.+-]+)', content, re.DOTALL)
+    if residual_match:
+        results["accuracy"] = {
+            "residual_ratio": float(residual_match.group(1)),
+            "A_norm": float(residual_match.group(2)),
+            "x_norm": float(residual_match.group(3)),
+            "b_norm": float(residual_match.group(4)),
+            "passed": True
+        }
+
+    return results
+
+def parse_hpcg_output(file_path):
+    with open(file_path, 'r') as f:
+        content = f.read()
+
+    results = {}
+
+    # Grid and domain info
+    grid_info = re.search(r"Process Grid: (\d+)x(\d+)x(\d+)", content)
+    domain_info = re.search(r"Local Domain: (\d+)x(\d+)x(\d+)", content)
+    if grid_info and domain_info:
+        results['process_grid'] = tuple(map(int, grid_info.groups()))
+        results['local_domain'] = tuple(map(int, domain_info.groups()))
+
+    # Iteration summary
+    iteration_summary = re.search(r"Iteration Count Information::Total number of reference iterations=(\d+).*?Total number of optimized iterations=(\d+)", content, re.DOTALL)
+    if iteration_summary:
+        results['reference_iterations'] = int(iteration_summary.group(1))
+        results['optimized_iterations'] = int(iteration_summary.group(2))
+
+    # Memory usage
+    mem_usage = re.search(r"Total memory used for data \(Gbytes\)=(\d+\.\d+)", content)
+    if mem_usage:
+        results['memory_used_GB'] = float(mem_usage.group(1))
+
+    # Performance summary
+    perf_summary = re.search(
+        r"GFLOP/s Summary::Raw Total=(\d+\.\d+).*?Total with convergence overhead=(\d+\.\d+).*?overhead=.*?=\s*(\d+\.\d+)",
+        content,
+        re.DOTALL,
+    )
+    if perf_summary:
+        results['gflops_raw_total'] = float(perf_summary.group(1))
+        results['gflops_with_convergence'] = float(perf_summary.group(2))
+        results['gflops_final'] = float(perf_summary.group(3))
+
+    # Final validation
+    final_validation = re.search(r"Final Summary::HPCG result is VALID.*?GFLOP/s rating of=(\d+\.\d+)", content)
+    if final_validation:
+        results['hpcg_valid'] = True
+        results['hpcg_rating'] = float(final_validation.group(1))
+    else:
+        results['hpcg_valid'] = False
+
+    return results
+
+
+def parse_stream_output(text):
+    result = {
+        "bus_width_bits": None,
+        "peak_bandwidth_gbps": None,
+        "array_size_mb": None,
+        "tests": {}
+    }
+
+    # Extract device info
+    device_match = re.search(r'Device 0: "(.+?)".*?(\d+)\s+SMs.*?Memory:\s+(\d+)MHz x (\d+)-bit\s+=\s+([\d.]+)\s+GB/s', text)
+    if device_match:
+        result["device_name"] = device_match.group(1)
+        result["memory_clock_mhz"] = int(device_match.group(3))
+        result["bus_width_bits"] = int(device_match.group(4))
+        result["peak_bandwidth_gbps"] = float(device_match.group(5))
+
+    # Extract array size
+    array_match = re.search(r'Array size \(double\)=.*\(([\d.]+) MB\)', text)
+    if array_match:
+        result["array_size_mb"] = float(array_match.group(1))
+
+    # Extract performance numbers for each test
+    for line in text.splitlines():
+        if re.match(r'^(Copy|Scale|Add|Triad):', line):
+            parts = re.split(r'\s+', line.strip())
+            if len(parts) >= 5:
+                test_name = parts[0].rstrip(":")
+                result["tests"][test_name] = {
+                    "rate_MBps": float(parts[1]),
+                    "avg_time_sec": float(parts[2]),
+                    "min_time_sec": float(parts[3]),
+                    "max_time_sec": float(parts[4]),
+                }
+
+    return result
+
 if __name__ == "__main__":
     test_results_dirs = find_all_test_result_paths()
 
@@ -88,13 +219,18 @@ if __name__ == "__main__":
             summary_file = find_latest_run(model_dirs)
             samples_per_sec, mean_latency_sec = parse_mlperf_result(summary_file, model_name)
 
-            benchmark_results[model_name] = {
+            mlperf_results[model_name] = {
                 "Samples per second": samples_per_sec,
                 "Mean latency (seconds)": mean_latency_sec
             }
         except Exception as e:
             print(f"Error processing {model_name}: {e}")
 
+    gpu_status = parse_gpu_status("gpu_burn.txt")
+    hpl_results = parse_hpl_output("hpl_results.txt")
+    hpcg_results = parse_hpcg_output("hpcg_results.txt") 
+    stream_results = parse_stream_output("stream_results.txt")
+    
     timestamp = datetime.now(timezone.utc)
     unix_time = timestamp.timestamp()
 
@@ -102,7 +238,13 @@ if __name__ == "__main__":
     result_doc = {
         "timestamp": timestamp.isoformat(),
         "unix_time": unix_time,
-        "benchmark_results": benchmark_results
+        "mlperf_results": mlperf_results,
+        "gpu_burn_result": gpu_status,
+        "hpc_results": {
+            "hpl": hpl_results,
+            "hpcg": hpcg_results,
+            "stream": stream_results,
+        }
     }
 
     result = db.benchmark_results.insert_one(result_doc)

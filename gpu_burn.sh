@@ -1,10 +1,12 @@
 #!/bin/bash
 
+# Might need more dependencies
+
 git clone https://github.com/wilicc/gpu-burn
 cd gpu-burn
 make
-./gpu_burn
-
+./gpu_burn | tee gpu_burn.txt
+cd ..
 # Sample output (to parse)
 # Run length not specified in the command line. Using compare file: compare.ptx
 # Burning for 10 seconds.
