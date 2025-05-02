@@ -61,7 +61,7 @@ cr run-mlperf,inference,_find-performance,_full,_r5.0-dev \
     --quiet \
     --test_query_count=500
 
-python3 parse.py
+# python3 parse.py
 
 # Deactivate the virtual environment
 deactivate

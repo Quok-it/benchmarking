@@ -14,5 +14,8 @@ chmod +x nvidia_hpc_benchmark.sh
 ./mlperf_benchmark_datacenter.sh
 ./gpu_burn.sh
 # ./graphics_benchmark.sh
+cd .. 
 ./nvidia_hpc_benchmark.sh
+
+python3 parse.py
 

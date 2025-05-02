@@ -78,8 +78,6 @@ def find_all_test_result_paths():
 def parse_gpu_status(file_path):
     with open(file_path, 'r') as f:
             lines = f.readlines()
-        else:
-            lines = sys.stdin.readlines()
     gpu_status = {}
     pattern = re.compile(r'GPU\s+(\d+):\s*(OK|FAIL|ERROR|.*)', re.IGNORECASE)
     for line in lines:
