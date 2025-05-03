@@ -7,6 +7,11 @@ sudo apt-get install -y --no-install-recommends \
     libcudnn8 libcudnn8-dev
 sudo apt install -y unzip wget curl
 
+pip install --upgrade pip
+pip install --no-cache-dir pymongo
+pip install python-dotenv
+
+
 chmod +x mlperf_benchmark_datacenter.sh
 chmod +x gpu_burn.sh
 # chmod +x graphics_benchmark.sh

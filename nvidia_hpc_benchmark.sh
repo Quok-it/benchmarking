@@ -8,8 +8,8 @@ sudo apt-get update
 sudo apt install nvidia-hpc-benchmarks-openmpi
 sudo apt install libopenmpi-dev
 cd /opt/nvidia/nvidia_hpc_benchmarks_openmpi
-./hpl.sh --dat ./hpl-linux-x86_64/sample-dat/HPL-1GPU.dat | tee hpl_results.txt
-./hpcg.sh --dat ./hpl-linux-x86_64/sample-dat/HPL-1GPU.dat --nx 256 --ny 256 --nz 256 --rt 2 | tee hpcg_results.txt
-./stream-gpu-test.sh --d 0 --n 100000000 | tee stream_results.txt
-cd ..
-cd benchmarking
+./hpl.sh --dat ./hpl-linux-x86_64/sample-dat/HPL-1GPU.dat | tee ~/benchmarking/hpl_results.txt
+./hpcg.sh --dat ./hpl-linux-x86_64/sample-dat/HPL-1GPU.dat --nx 256 --ny 256 --nz 256 --rt 2 | tee ~/benchmarking/hpcg_results.txt
+./stream-gpu-test.sh --d 0 --n 100000000 | tee ~/benchmarking/stream_results.txt
+# cd ..
+# cd benchmarking
