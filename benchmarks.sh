@@ -17,7 +17,7 @@ chmod +x gpu_burn.sh
 # chmod +x graphics_benchmark.sh
 chmod +x nvidia_hpc_benchmark.sh
 ./mlperf_benchmark_datacenter.sh
-./gpu_burn.sh
+./gpu_burn.shh
 # ./graphics_benchmark.sh
 ./nvidia_hpc_benchmark.sh
 
