@@ -89,13 +89,13 @@ def parse_gpu_status(file_path):
             gpu_status[gpu_id] = status
     return gpu_status
 
-def parse_hpl_output(filepath: str):
+def parse_hpl_output(file_path: str):
     results = {
         "accuracy": {},
         "performance": {}
     }
 
-    with open(filepath, 'r') as file:
+    with open(file_path, 'r') as file:
         content = file.read()
 
     # Extract main test result
@@ -168,10 +168,10 @@ def parse_hpcg_output(file_path):
 
     return results
 
+def parse_stream_output(file_path):
+    with open(file_path, "r") as f:
+        text = f.read()
 
-import re
-
-def parse_stream_output(text):
     result = {
         "bus_width_bits": None,
         "peak_bandwidth_gbps": None,
@@ -179,40 +179,45 @@ def parse_stream_output(text):
         "tests": {}
     }
 
-    # Extract device info
+    # Match device info
     device_match = re.search(
-        r'Device 0: "(.+?)"\s+\d+\s+SMs.*?Memory:\s+(\d+)MHz x (\d+)-bit\s+=\s+([\d.]+)\s+GB/s',
-        text
+        r'Device 0: "([^"]+)"\s+\d+\s+SMs.*?Memory:\s+(\d+)MHz x (\d+)-bit\s+=\s+([\d.]+)\s+GB/s',
+        text,
+        re.DOTALL
     )
     if device_match:
+        result["device_name"] = device_match.group(1)
         result["bus_width_bits"] = int(device_match.group(3))
         result["peak_bandwidth_gbps"] = float(device_match.group(4))
 
-    # Extract array size
+    # Match array size
     array_match = re.search(r'Array size \(double\)=.*\(([\d.]+)\s+MB\)', text)
     if array_match:
         result["array_size_mb"] = float(array_match.group(1))
 
-    # Extract STREAM test results
-    test_pattern = re.compile(r'^(Copy|Scale|Add|Triad):\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)')
-    for line in text.splitlines():
-        match = test_pattern.match(line.strip())
-        if match:
-            test_name = match.group(1)
-            result["tests"][test_name] = {
-                "rate_MBps": float(match.group(2)),
-                "avg_time_sec": float(match.group(3)),
-                "min_time_sec": float(match.group(4)),
-                "max_time_sec": float(match.group(5)),
-            }
+    # Match tests (Copy, Scale, Add, Triad) using MULTILINE
+    test_pattern = re.compile(
+        r'^\s*(Copy|Scale|Add|Triad):\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)',
+        re.MULTILINE
+    )
+    for match in test_pattern.finditer(text):
+        name = match.group(1)
+        result["tests"][name] = {
+            "rate_MBps": float(match.group(2)),
+            "avg_time_sec": float(match.group(3)),
+            "min_time_sec": float(match.group(4)),
+            "max_time_sec": float(match.group(5))
+        }
 
     return result
+
 
 if __name__ == "__main__":
     test_results_dirs = find_all_test_result_paths()
 
-    models_list = ["resnet50", "stable-diffusion-xl", "bert-99"]
+    models_list = ["resnet50", "bert-99"]
 
+    mlperf_results = {}
     for model_name in models_list:
         try:
             model_dirs = [os.path.join(test_result_dir, model_name) for test_result_dir in test_results_dirs]
