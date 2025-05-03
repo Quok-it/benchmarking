@@ -5,7 +5,7 @@
 git clone https://github.com/wilicc/gpu-burn
 cd gpu-burn
 make
-./gpu_burn | tee gpu_burn.txt
+./gpu_burn | tee ~/benchmarking/gpu_burn.txt
 cd ..
 # Sample output (to parse)
 # Run length not specified in the command line. Using compare file: compare.ptx

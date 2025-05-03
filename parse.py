@@ -4,6 +4,7 @@ from pymongo import MongoClient
 from datetime import datetime, timezone
 import glob
 from dotenv import load_dotenv
+import re
 
 load_dotenv()
 
@@ -83,12 +84,12 @@ def parse_gpu_status(file_path):
     for line in lines:
         match = pattern.search(line)
         if match:
-            gpu_id = int(match.group(1))
+            gpu_id = match.group(1)
             status = match.group(2).strip().upper()
             gpu_status[gpu_id] = status
     return gpu_status
 
-def parse_hpl_output(filepath: str) -> Dict:
+def parse_hpl_output(filepath: str):
     results = {
         "accuracy": {},
         "performance": {}
@@ -168,6 +169,8 @@ def parse_hpcg_output(file_path):
     return results
 
 
+import re
+
 def parse_stream_output(text):
     result = {
         "bus_width_bits": None,
@@ -177,30 +180,31 @@ def parse_stream_output(text):
     }
 
     # Extract device info
-    device_match = re.search(r'Device 0: "(.+?)".*?(\d+)\s+SMs.*?Memory:\s+(\d+)MHz x (\d+)-bit\s+=\s+([\d.]+)\s+GB/s', text)
+    device_match = re.search(
+        r'Device 0: "(.+?)"\s+\d+\s+SMs.*?Memory:\s+(\d+)MHz x (\d+)-bit\s+=\s+([\d.]+)\s+GB/s',
+        text
+    )
     if device_match:
-        result["device_name"] = device_match.group(1)
-        result["memory_clock_mhz"] = int(device_match.group(3))
-        result["bus_width_bits"] = int(device_match.group(4))
-        result["peak_bandwidth_gbps"] = float(device_match.group(5))
+        result["bus_width_bits"] = int(device_match.group(3))
+        result["peak_bandwidth_gbps"] = float(device_match.group(4))
 
     # Extract array size
-    array_match = re.search(r'Array size \(double\)=.*\(([\d.]+) MB\)', text)
+    array_match = re.search(r'Array size \(double\)=.*\(([\d.]+)\s+MB\)', text)
     if array_match:
         result["array_size_mb"] = float(array_match.group(1))
 
-    # Extract performance numbers for each test
+    # Extract STREAM test results
+    test_pattern = re.compile(r'^(Copy|Scale|Add|Triad):\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)')
     for line in text.splitlines():
-        if re.match(r'^(Copy|Scale|Add|Triad):', line):
-            parts = re.split(r'\s+', line.strip())
-            if len(parts) >= 5:
-                test_name = parts[0].rstrip(":")
-                result["tests"][test_name] = {
-                    "rate_MBps": float(parts[1]),
-                    "avg_time_sec": float(parts[2]),
-                    "min_time_sec": float(parts[3]),
-                    "max_time_sec": float(parts[4]),
-                }
+        match = test_pattern.match(line.strip())
+        if match:
+            test_name = match.group(1)
+            result["tests"][test_name] = {
+                "rate_MBps": float(match.group(2)),
+                "avg_time_sec": float(match.group(3)),
+                "min_time_sec": float(match.group(4)),
+                "max_time_sec": float(match.group(5)),
+            }
 
     return result
 
@@ -208,8 +212,6 @@ if __name__ == "__main__":
     test_results_dirs = find_all_test_result_paths()
 
     models_list = ["resnet50", "stable-diffusion-xl", "bert-99"]
-
-    benchmark_results = {}
 
     for model_name in models_list:
         try:

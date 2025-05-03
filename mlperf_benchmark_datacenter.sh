@@ -13,11 +13,11 @@ python3 -m venv mlc
 source mlc/bin/activate 
 
 # Install packages
-pip install --upgrade pip
+# pip install --upgrade pip
 pip install mlc-scripts
 pip install cmx4mlperf
-pip install --no-cache-dir pymongo
-pip install python-dotenv
+# pip install --no-cache-dir pymongo
+# pip install python-dotenv
 
 # Install mlperf environment
 mlcr install,python-venv --name=mlperf
@@ -38,16 +38,16 @@ cr run-mlperf,inference,_find-performance,_full,_r5.0-dev \
    --test_query_count=5000
 
 # Run Stable Diffusion MLPerf inference test
-cr run-mlperf,inference,_find-performance,_full,_r5.0-dev \
-   --model=sdxl \
-   --implementation=reference \
-   --framework=pytorch \
-   --category=datacenter \
-   --scenario=Offline \
-   --execution_mode=test \
-   --device=cuda  \
-   --quiet \
-   --test_query_count=50
+# cr run-mlperf,inference,_find-performance,_full,_r5.0-dev \
+#    --model=sdxl \
+#    --implementation=reference \
+#    --framework=pytorch \
+#    --category=datacenter \
+#    --scenario=Offline \
+#    --execution_mode=test \
+#    --device=cuda  \
+#    --quiet \
+#    --test_query_count=50
 
 # Run BERT MLPerf inference test
 cr run-mlperf,inference,_find-performance,_full,_r5.0-dev \
