@@ -10,7 +10,8 @@ sudo apt install -y unzip wget curl
 pip install --upgrade pip
 pip install --no-cache-dir pymongo
 pip install python-dotenv
-
+python3 -m pip install --upgrade tensorrt
+python3 -m pip install tensorrt-cu11 tensorrt-lean-cu11 tensorrt-dispatch-cu11
 
 chmod +x mlperf_benchmark_datacenter.sh
 chmod +x gpu_burn.sh
