@@ -6,16 +6,17 @@ import glob
 from dotenv import load_dotenv
 import re
 
-load_dotenv()
+# load_dotenv()
 
-# Setup MongoDB connection
-try:
-    client = MongoClient(os.environ["MONGODB_URI"])
-    db = client["QCP"]
-    client.admin.command('ping')  # Ensure connection is live
-except pymongo.errors.PyMongoError as e:
-    print(f"MongoDB connection error: {e}")
-    exit(1)
+# # Setup MongoDB connection
+# try:
+#     client = MongoClient(os.environ["MONGODB_URI"])
+#     db = client["QCP"]
+#     client.admin.command('ping')  # Ensure connection is live
+# except pymongo.errors.PyMongoError as e:
+#     print(f"MongoDB connection error: {e}")
+#     exit(1)
+import json
 
 def parse_mlperf_result(file_path, model_name):
     samples_per_sec = None
@@ -241,8 +242,6 @@ if __name__ == "__main__":
     
     # Insert into MongoDB
     result_doc = {
-        "timestamp": timestamp.isoformat(),
-        "unix_time": unix_time,
         "mlperf_results": mlperf_results,
         "gpu_burn_result": gpu_status,
         "hpc_results": {
@@ -251,6 +250,7 @@ if __name__ == "__main__":
             "stream": stream_results,
         }
     }
-    session.benchmarks["gpu_benchmarks"] = result_doc
+    print(json.dumps(result_doc))
+    # session.benchmarks["gpu_benchmarks"] = result_doc
     # result = db.benchmark_results.insert_one(result_doc)
     # print(f"Inserted benchmark results with _id: {result.inserted_id}")
