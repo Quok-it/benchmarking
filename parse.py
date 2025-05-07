@@ -214,118 +214,45 @@ def parse_stream_output(file_path):
 
 
 # REAL ONE 
-# if __name__ == "__main__":
-#     test_results_dirs = find_all_test_result_paths()
+if __name__ == "__main__":
+    test_results_dirs = find_all_test_result_paths()
 
-#     models_list = ["resnet50", "bert-99"]
+    models_list = ["resnet50", "bert-99"]
 
-#     mlperf_results = {}
-#     for model_name in models_list:
-#         try:
-#             model_dirs = [os.path.join(test_result_dir, model_name) for test_result_dir in test_results_dirs]
-#             summary_file = find_latest_run(model_dirs)
-#             samples_per_sec, mean_latency_sec = parse_mlperf_result(summary_file, model_name)
+    mlperf_results = {}
+    for model_name in models_list:
+        try:
+            model_dirs = [os.path.join(test_result_dir, model_name) for test_result_dir in test_results_dirs]
+            summary_file = find_latest_run(model_dirs)
+            samples_per_sec, mean_latency_sec = parse_mlperf_result(summary_file, model_name)
 
-#             mlperf_results[model_name] = {
-#                 "Samples per second": samples_per_sec,
-#                 "Mean latency (seconds)": mean_latency_sec
-#             }
-#         except Exception as e:
-#             print(f"Error processing {model_name}: {e}")
+            mlperf_results[model_name] = {
+                "Samples per second": samples_per_sec,
+                "Mean latency (seconds)": mean_latency_sec
+            }
+        except Exception as e:
+            print(f"Error processing {model_name}: {e}")
 
-#     gpu_status = parse_gpu_status("gpu_burn.txt")
-#     hpl_results = parse_hpl_output("hpl_results.txt")
-#     hpcg_results = parse_hpcg_output("hpcg_results.txt") 
-#     stream_results = parse_stream_output("stream_results.txt")
+    gpu_status = parse_gpu_status("gpu_burn.txt")
+    hpl_results = parse_hpl_output("hpl_results.txt")
+    hpcg_results = parse_hpcg_output("hpcg_results.txt") 
+    stream_results = parse_stream_output("stream_results.txt")
     
-#     timestamp = datetime.now(timezone.utc)
-#     unix_time = timestamp.timestamp()
+    timestamp = datetime.now(timezone.utc)
+    unix_time = timestamp.timestamp()
     
-#     # Insert into MongoDB
-#     result_doc = {
-#         "mlperf_results": mlperf_results,
-#         "gpu_burn_result": gpu_status,
-#         "hpc_results": {
-#             "hpl": hpl_results,
-#             "hpcg": hpcg_results,
-#             "stream": stream_results,
-#         }
-#     }
-#     print(json.dumps(result_doc))
+    # Insert into MongoDB
+    result_doc = {
+        "mlperf_results": mlperf_results,
+        "gpu_burn_result": gpu_status,
+        "hpc_results": {
+            "hpl": hpl_results,
+            "hpcg": hpcg_results,
+            "stream": stream_results,
+        }
+    }
+    print(json.dumps(result_doc))
     # session.benchmarks["gpu_benchmarks"] = result_doc
     # result = db.benchmark_results.insert_one(result_doc)
     # print(f"Inserted benchmark results with _id: {result.inserted_id}")
 
-# FAKE ONE 
-if __name__ == "__main__":
-    hardcoded_result = {
-        "brungus": "MEEEEEEEEEEOWWW",
-        "mlperf_results": {},
-        "gpu_burn_result": {
-            "0": "OK"
-        },
-        "hpc_results": {
-            "hpl": {
-                "accuracy": {
-                    "residual_ratio": 5.45409,
-                    "A_norm": 23224.86187291763,
-                    "x_norm": 6.76265874767683,
-                    "b_norm": 0.499997127081358,
-                    "passed": True
-                },
-                "performance": {
-                    "N": 92160,
-                    "NB": 1024,
-                    "P": 1,
-                    "Q": 1,
-                    "time_sec": 11.43,
-                    "gflops": 45670
-                }
-            },
-            "hpcg": {
-                "process_grid": [1, 1, 1],
-                "local_domain": [256, 256, 256],
-                "reference_iterations": 150,
-                "optimized_iterations": 156,
-                "memory_used_GB": 11.9905,
-                "gflops_raw_total": 406.936,
-                "gflops_with_convergence": 391.284,
-                "gflops_final": 0.250763,
-                "hpcg_valid": True,
-                "hpcg_rating": 377.909
-            },
-            "stream": {
-                "bus_width_bits": 5120,
-                "peak_bandwidth_gbps": 3352.3,
-                "array_size_mb": 6103,
-                "tests": {
-                    "Copy": {
-                        "rate_MBps": 3036928.9526,
-                        "avg_time_sec": 0.0005,
-                        "min_time_sec": 0.0005,
-                        "max_time_sec": 0.0005
-                    },
-                    "Scale": {
-                        "rate_MBps": 3028467.5124,
-                        "avg_time_sec": 0.0005,
-                        "min_time_sec": 0.0005,
-                        "max_time_sec": 0.0005
-                    },
-                    "Add": {
-                        "rate_MBps": 3099942.0974,
-                        "avg_time_sec": 0.0008,
-                        "min_time_sec": 0.0008,
-                        "max_time_sec": 0.0008
-                    },
-                    "Triad": {
-                        "rate_MBps": 3105718.5804,
-                        "avg_time_sec": 0.0008,
-                        "min_time_sec": 0.0008,
-                        "max_time_sec": 0.0008
-                    }
-                },
-                "device_name": "NVIDIA H100 80GB HBM3"
-            }
-        }
-    }
-    print(json.dumps(hardcoded_result))
