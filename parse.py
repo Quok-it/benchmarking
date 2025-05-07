@@ -11,7 +11,7 @@ load_dotenv()
 # Setup MongoDB connection
 try:
     client = MongoClient(os.environ["MONGODB_URI"])
-    db = client["gpu_monitoring"]
+    db = client["QCP"]
     client.admin.command('ping')  # Ensure connection is live
 except pymongo.errors.PyMongoError as e:
     print(f"MongoDB connection error: {e}")
@@ -238,7 +238,7 @@ if __name__ == "__main__":
     
     timestamp = datetime.now(timezone.utc)
     unix_time = timestamp.timestamp()
-
+    
     # Insert into MongoDB
     result_doc = {
         "timestamp": timestamp.isoformat(),
@@ -251,6 +251,6 @@ if __name__ == "__main__":
             "stream": stream_results,
         }
     }
-
-    result = db.benchmark_results.insert_one(result_doc)
+    session.benchmarks["gpu_benchmarks"] = result_doc
+    # result = db.benchmark_results.insert_one(result_doc)
     # print(f"Inserted benchmark results with _id: {result.inserted_id}")
