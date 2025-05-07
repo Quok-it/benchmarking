@@ -14,7 +14,7 @@ pip install python-dotenv
 chmod +x mlperf_benchmark_datacenter.sh
 chmod +x gpu_burn.sh
 # chmod +x graphics_benchmark.sh
-chmod +x nvidia_hpc_benchmark.sh
+# chmod +x nvidia_hpc_benchmark.sh
 ./mlperf_benchmark_datacenter.sh
 ./gpu_burn.sh
 # ./graphics_benchmark.sh
