@@ -26,16 +26,16 @@ mlcr install,python-venv --name=mlperf
 export MLC_SCRIPT_EXTRA_CMD="--adr.python.name=mlperf"
 
 # Run ResNet50 MLPerf inference test
-cr run-mlperf,inference,_find-performance,_full,_r5.0-dev \
-   --model=resnet50 \
-   --implementation=reference \
-   --framework=tensorflow \
-   --category=datacenter \
-   --scenario=Offline \
-   --execution_mode=test \
-   --device=cuda  \
-   --quiet \
-   --test_query_count=5000
+# cr run-mlperf,inference,_find-performance,_full,_r5.0-dev \
+#    --model=resnet50 \
+#    --implementation=reference \
+#    --framework=tensorflow \
+#    --category=datacenter \
+#    --scenario=Offline \
+#    --execution_mode=test \
+#    --device=cuda  \
+#    --quiet \
+#    --test_query_count=5000
 
 # Run Stable Diffusion MLPerf inference test
 # cr run-mlperf,inference,_find-performance,_full,_r5.0-dev \
