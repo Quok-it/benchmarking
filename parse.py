@@ -217,7 +217,9 @@ def parse_stream_output(file_path):
 if __name__ == "__main__":
     test_results_dirs = find_all_test_result_paths()
 
-    models_list = ["resnet50", "bert-99"]
+    models_list = ["bert-99"]
+    # models_list = ["resnet50", "bert-99"]
+
 
     mlperf_results = {}
     for model_name in models_list:
