@@ -235,10 +235,10 @@ if __name__ == "__main__":
         except Exception as e:
             print(f"Error processing {model_name}: {e}")
 
-    gpu_status = parse_gpu_status("gpu_burn.txt")
-    hpl_results = parse_hpl_output("hpl_results.txt")
-    hpcg_results = parse_hpcg_output("hpcg_results.txt") 
-    stream_results = parse_stream_output("stream_results.txt")
+    # gpu_status = parse_gpu_status("gpu_burn.txt")
+    # hpl_results = parse_hpl_output("hpl_results.txt")
+    # hpcg_results = parse_hpcg_output("hpcg_results.txt") 
+    # stream_results = parse_stream_output("stream_results.txt")
     
     timestamp = datetime.now(timezone.utc)
     unix_time = timestamp.timestamp()
@@ -246,13 +246,18 @@ if __name__ == "__main__":
     # Insert into MongoDB
     result_doc = {
         "mlperf_results": mlperf_results,
-        "gpu_burn_result": gpu_status,
-        "hpc_results": {
-            "hpl": hpl_results,
-            "hpcg": hpcg_results,
-            "stream": stream_results,
-        }
     }
+    
+    #  result_doc = {
+    #     "mlperf_results": mlperf_results,
+    #     "gpu_burn_result": gpu_status,
+    #     "hpc_results": {
+    #         "hpl": hpl_results,
+    #         "hpcg": hpcg_results,
+    #         "stream": stream_results,
+    #     }
+    # }
+     
     print(json.dumps(result_doc))
     # session.benchmarks["gpu_benchmarks"] = result_doc
     # result = db.benchmark_results.insert_one(result_doc)
