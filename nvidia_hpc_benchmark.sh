@@ -5,7 +5,7 @@ set -euo pipefail
 
 cd .. 
 wget https://developer.download.nvidia.com/compute/nvidia-hpc-benchmarks/25.04/local_installers/nvidia-hpc-benchmarks-local-repo-ubuntu2204-25.04_1.0-1_amd64.deb
-sudo dpkg -i nvidia-hpc-benchmarks-local-repo-ubuntu2204-25.04_1.0-1_amd64.deb
+sudo apt install -y ./nvidia-hpc-benchmarks-local-repo-ubuntu2204-25.04_1.0-1_amd64.deb
 sudo cp /var/nvidia-hpc-benchmarks-local-repo-ubuntu2204-25.04/nvidia-hpc-benchmarks-*-keyring.gpg /usr/share/keyrings/
 sudo apt-get update
 sudo apt install -y nvidia-hpc-benchmarks-openmpi

@@ -4,8 +4,7 @@ set -euo pipefail
 
 
 wget https://phoronix-test-suite.com/releases/repo/pts.debian/files/phoronix-test-suite_10.8.3_all.deb
-sudo dpkg -i phoronix*.deb
-sudo apt-get install -f
+sudo apt-get install -y ./phoronix*.deb
 # enter 11, 5
 # sudo apt-get install unzip
 phoronix-test-suite install unigine-heaven
