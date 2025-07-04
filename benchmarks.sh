@@ -9,6 +9,9 @@ sudo apt-get install -y --no-install-recommends \
     libcudnn8 libcudnn8-dev
 sudo apt-get install -y unzip wget curl
 
+# GPU Burn Dependencies (pulls gcc, stdc headers, glibc headers, dpkg stuff, and make)
+sudo apt-get install -y build-essential
+
 pip install --upgrade pip
 pip install --no-cache-dir pymongo
 pip install python-dotenv
