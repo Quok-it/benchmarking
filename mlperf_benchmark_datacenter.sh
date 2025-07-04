@@ -1,4 +1,7 @@
 #!/bin/bash
+set -euo pipefail
+
+
 set -e 
 
 # sudo apt-get update > /dev/null 2>&1
