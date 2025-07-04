@@ -1,4 +1,7 @@
 #!/bin/bash
+set -euo pipefail
+
+
 
 cd .. 
 wget https://developer.download.nvidia.com/compute/nvidia-hpc-benchmarks/25.04/local_installers/nvidia-hpc-benchmarks-local-repo-ubuntu2204-25.04_1.0-1_amd64.deb
