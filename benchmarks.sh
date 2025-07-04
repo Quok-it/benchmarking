@@ -1,11 +1,13 @@
 #!/bin/bash
+set -euo pipefail
+
 
 sudo apt-get update
 sudo apt-get install -y python3.10-venv
 sudo apt-get install -y python3-pip
 sudo apt-get install -y --no-install-recommends \
     libcudnn8 libcudnn8-dev
-sudo apt install -y unzip wget curl
+sudo apt-get install -y unzip wget curl
 
 pip install --upgrade pip
 pip install --no-cache-dir pymongo
