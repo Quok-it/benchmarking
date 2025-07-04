@@ -8,13 +8,21 @@ sudo apt-get install -y --no-install-recommends \
 sudo apt install -y unzip wget curl
 
 pip install --upgrade pip
-pip install --no-cache-dir pymongo
-pip install python-dotenv
+pip install -r requirements.txt
 
 chmod +x mlperf_benchmark_datacenter.sh
 chmod +x gpu_burn.sh
 # chmod +x graphics_benchmark.sh
 chmod +x nvidia_hpc_benchmark.sh
+
+# Initialize database if .env file exists
+if [ -f ".env" ]; then
+    echo "Initializing database..."
+    python3 init_database.py
+else
+    echo "Warning: .env file not found. Please run setup_rds.sh first or create .env manually."
+fi
+
 ./mlperf_benchmark_datacenter.sh
 ./gpu_burn.sh
 # ./graphics_benchmark.sh

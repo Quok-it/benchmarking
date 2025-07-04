@@ -1,0 +1,4 @@
+psycopg2-binary==2.9.7
+python-dotenv==1.0.0
+mlc-scripts
+cmx4mlperf 

@@ -1,22 +1,110 @@
 import os
-import pymongo
-from pymongo import MongoClient
+import psycopg2
+from psycopg2.extras import RealDictCursor, Json
 from datetime import datetime, timezone
 import glob
 from dotenv import load_dotenv
 import re
-
-# load_dotenv()
-
-# # Setup MongoDB connection
-# try:
-#     client = MongoClient(os.environ["MONGODB_URI"])
-#     db = client["QCP"]
-#     client.admin.command('ping')  # Ensure connection is live
-# except pymongo.errors.PyMongoError as e:
-#     print(f"MongoDB connection error: {e}")
-#     exit(1)
 import json
+import uuid
+import subprocess
+
+# Load environment variables
+load_dotenv()
+
+class PostgreSQLBenchmarkDB:
+    def __init__(self):
+        self.connection = None
+        self.connect()
+    
+    def connect(self):
+        """Establish connection to PostgreSQL database"""
+        try:
+            self.connection = psycopg2.connect(
+                host=os.getenv('DB_HOST'),
+                port=os.getenv('DB_PORT', '5432'),
+                database=os.getenv('DB_NAME'),
+                user=os.getenv('DB_USER'),
+                password=os.getenv('DB_PASSWORD')
+            )
+            print("Successfully connected to PostgreSQL database")
+        except Exception as e:
+            print(f"Database connection error: {e}")
+            raise
+    
+    def get_gpu_info(self):
+        """Get current GPU information"""
+        try:
+            # Get GPU model and ID using nvidia-smi
+            result = subprocess.run(['nvidia-smi', '--query-gpu=name,uuid', '--format=csv,noheader,nounits'], 
+                                  capture_output=True, text=True)
+            if result.returncode == 0:
+                lines = result.stdout.strip().split('\n')
+                gpu_info = []
+                for i, line in enumerate(lines):
+                    if line.strip():
+                        name, uuid_gpu = line.split(', ')
+                        gpu_info.append({
+                            'gpu_id': str(i),
+                            'gpu_model': name.strip(),
+                            'gpu_uuid': uuid_gpu.strip()
+                        })
+                return gpu_info
+            else:
+                # Fallback to basic info
+                return [{'gpu_id': '0', 'gpu_model': 'Unknown GPU', 'gpu_uuid': 'unknown'}]
+        except Exception as e:
+            print(f"Error getting GPU info: {e}")
+            return [{'gpu_id': '0', 'gpu_model': 'Unknown GPU', 'gpu_uuid': 'unknown'}]
+    
+    def get_hostname(self):
+        """Get current hostname"""
+        try:
+            return subprocess.run(['hostname'], capture_output=True, text=True).stdout.strip()
+        except:
+            return "unknown-host"
+    
+    def insert_benchmark_result(self, gpu_node, gpu_id, gpu_model, benchmark_type, benchmark_data):
+        """Insert raw benchmark result into database"""
+        try:
+            with self.connection.cursor() as cursor:
+                cursor.execute("""
+                    INSERT INTO raw_benchmark_results 
+                    (gpu_node, gpu_id, gpu_model, benchmark_type, benchmark_data, timestamp)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                    RETURNING audit_id
+                """, (gpu_node, gpu_id, gpu_model, benchmark_type, Json(benchmark_data), datetime.now(timezone.utc)))
+                
+                audit_id = cursor.fetchone()[0]
+                self.connection.commit()
+                print(f"Inserted benchmark result with audit_id: {audit_id}")
+                return audit_id
+        except Exception as e:
+            print(f"Error inserting benchmark result: {e}")
+            self.connection.rollback()
+            raise
+    
+    def update_gpu_aggregates(self, gpu_node, gpu_id, gpu_model, benchmark_type, metrics):
+        """Update GPU aggregates with new metrics"""
+        try:
+            with self.connection.cursor() as cursor:
+                for metric_name, value in metrics.items():
+                    if isinstance(value, (int, float)):
+                        cursor.execute("""
+                            SELECT update_gpu_aggregates(%s, %s, %s, %s, %s, %s)
+                        """, (gpu_node, gpu_id, gpu_model, benchmark_type, metric_name, float(value)))
+            
+            self.connection.commit()
+            print(f"Updated GPU aggregates for {gpu_node}:{gpu_id}")
+        except Exception as e:
+            print(f"Error updating GPU aggregates: {e}")
+            self.connection.rollback()
+            raise
+    
+    def close(self):
+        """Close database connection"""
+        if self.connection:
+            self.connection.close()
 
 def parse_mlperf_result(file_path, model_name):
     samples_per_sec = None
@@ -212,54 +300,168 @@ def parse_stream_output(file_path):
 
     return result
 
+def main():
+    # Initialize database connection
+    db = PostgreSQLBenchmarkDB()
+    
+    # Get system information
+    gpu_info_list = db.get_gpu_info()
+    hostname = db.get_hostname()
+    
+    print(f"Processing benchmarks for host: {hostname}")
+    print(f"Found {len(gpu_info_list)} GPU(s)")
+    
+    # Process MLPerf results
+    try:
+        test_results_dirs = find_all_test_result_paths()
+        models_list = ["bert-99"]
+        
+        for model_name in models_list:
+            try:
+                model_dirs = [os.path.join(test_result_dir, model_name) for test_result_dir in test_results_dirs]
+                summary_file = find_latest_run(model_dirs)
+                samples_per_sec, mean_latency_sec = parse_mlperf_result(summary_file, model_name)
+                
+                # Store results for each GPU
+                for gpu_info in gpu_info_list:
+                    benchmark_data = {
+                        "model": model_name,
+                        "samples_per_second": samples_per_sec,
+                        "mean_latency_seconds": mean_latency_sec,
+                        "mean_latency_ns": mean_latency_sec * 1e9
+                    }
+                    
+                    # Insert raw result
+                    audit_id = db.insert_benchmark_result(
+                        hostname, 
+                        gpu_info['gpu_id'], 
+                        gpu_info['gpu_model'], 
+                        'mlperf', 
+                        benchmark_data
+                    )
+                    
+                    # Update aggregates
+                    metrics = {
+                        'samples_per_second': samples_per_sec,
+                        'mean_latency_seconds': mean_latency_sec
+                    }
+                    db.update_gpu_aggregates(hostname, gpu_info['gpu_id'], gpu_info['gpu_model'], 'mlperf', metrics)
+                    
+            except Exception as e:
+                print(f"Error processing {model_name}: {e}")
+    
+    except Exception as e:
+        print(f"Error processing MLPerf results: {e}")
+    
+    # Process GPU burn results
+    try:
+        if os.path.exists("gpu_burn.txt"):
+            gpu_status = parse_gpu_status("gpu_burn.txt")
+            
+            for gpu_id, status in gpu_status.items():
+                benchmark_data = {
+                    "status": status,
+                    "test_type": "stress_test"
+                }
+                
+                # Find corresponding GPU info
+                gpu_info = next((gpu for gpu in gpu_info_list if gpu['gpu_id'] == gpu_id), 
+                               {'gpu_id': gpu_id, 'gpu_model': 'Unknown GPU'})
+                
+                # Insert raw result
+                audit_id = db.insert_benchmark_result(
+                    hostname, 
+                    gpu_info['gpu_id'], 
+                    gpu_info['gpu_model'], 
+                    'gpu_burn', 
+                    benchmark_data
+                )
+                
+                # Update aggregates (reliability score)
+                reliability_score = 1.0 if status == 'OK' else 0.0
+                metrics = {'reliability_score': reliability_score}
+                db.update_gpu_aggregates(hostname, gpu_info['gpu_id'], gpu_info['gpu_model'], 'gpu_burn', metrics)
+    
+    except Exception as e:
+        print(f"Error processing GPU burn results: {e}")
+    
+    # Process HPC results
+    try:
+        # HPL results
+        if os.path.exists("hpl_results.txt"):
+            hpl_results = parse_hpl_output("hpl_results.txt")
+            
+            for gpu_info in gpu_info_list:
+                benchmark_data = {
+                    "hpl_results": hpl_results
+                }
+                
+                audit_id = db.insert_benchmark_result(
+                    hostname, 
+                    gpu_info['gpu_id'], 
+                    gpu_info['gpu_model'], 
+                    'hpl', 
+                    benchmark_data
+                )
+                
+                # Update aggregates with HPL performance
+                if 'performance' in hpl_results and 'gflops' in hpl_results['performance']:
+                    metrics = {'gflops': hpl_results['performance']['gflops']}
+                    db.update_gpu_aggregates(hostname, gpu_info['gpu_id'], gpu_info['gpu_model'], 'hpl', metrics)
+        
+        # HPCG results
+        if os.path.exists("hpcg_results.txt"):
+            hpcg_results = parse_hpcg_output("hpcg_results.txt")
+            
+            for gpu_info in gpu_info_list:
+                benchmark_data = {
+                    "hpcg_results": hpcg_results
+                }
+                
+                audit_id = db.insert_benchmark_result(
+                    hostname, 
+                    gpu_info['gpu_id'], 
+                    gpu_info['gpu_model'], 
+                    'hpcg', 
+                    benchmark_data
+                )
+                
+                # Update aggregates with HPCG performance
+                if 'hpcg_rating' in hpcg_results:
+                    metrics = {'hpcg_rating': hpcg_results['hpcg_rating']}
+                    db.update_gpu_aggregates(hostname, gpu_info['gpu_id'], gpu_info['gpu_model'], 'hpcg', metrics)
+        
+        # STREAM results
+        if os.path.exists("stream_results.txt"):
+            stream_results = parse_stream_output("stream_results.txt")
+            
+            for gpu_info in gpu_info_list:
+                benchmark_data = {
+                    "stream_results": stream_results
+                }
+                
+                audit_id = db.insert_benchmark_result(
+                    hostname, 
+                    gpu_info['gpu_id'], 
+                    gpu_info['gpu_model'], 
+                    'stream', 
+                    benchmark_data
+                )
+                
+                # Update aggregates with STREAM performance
+                if 'tests' in stream_results:
+                    for test_name, test_data in stream_results['tests'].items():
+                        metrics = {f'{test_name.lower()}_bandwidth_mbps': test_data['rate_MBps']}
+                        db.update_gpu_aggregates(hostname, gpu_info['gpu_id'], gpu_info['gpu_model'], 'stream', metrics)
+    
+    except Exception as e:
+        print(f"Error processing HPC results: {e}")
+    
+    # Close database connection
+    db.close()
+    
+    print("Benchmark processing completed successfully!")
 
-# REAL ONE 
 if __name__ == "__main__":
-    test_results_dirs = find_all_test_result_paths()
-
-    models_list = ["bert-99"]
-    # models_list = ["resnet50", "bert-99"]
-
-
-    mlperf_results = {}
-    for model_name in models_list:
-        try:
-            model_dirs = [os.path.join(test_result_dir, model_name) for test_result_dir in test_results_dirs]
-            summary_file = find_latest_run(model_dirs)
-            samples_per_sec, mean_latency_sec = parse_mlperf_result(summary_file, model_name)
-
-            mlperf_results[model_name] = {
-                "Samples per second": samples_per_sec,
-                "Mean latency (seconds)": mean_latency_sec
-            }
-        except Exception as e:
-            print(f"Error processing {model_name}: {e}")
-
-    gpu_status = parse_gpu_status("gpu_burn.txt")
-    hpl_results = parse_hpl_output("hpl_results.txt")
-    hpcg_results = parse_hpcg_output("hpcg_results.txt") 
-    stream_results = parse_stream_output("stream_results.txt")
-    
-    timestamp = datetime.now(timezone.utc)
-    unix_time = timestamp.timestamp()
-    
-    # # Insert into MongoDB
-    # result_doc = {
-    #     "mlperf_results": mlperf_results,
-    # }
-    
-    result_doc = {
-        "mlperf_results": mlperf_results,
-        "gpu_burn_result": gpu_status,
-        "hpc_results": {
-            "hpl": hpl_results,
-            "hpcg": hpcg_results,
-            "stream": stream_results,
-        }
-    }
-     
-    print(json.dumps(result_doc))
-    # session.benchmarks["gpu_benchmarks"] = result_doc
-    # result = db.benchmark_results.insert_one(result_doc)
-    # print(f"Inserted benchmark results with _id: {result.inserted_id}")
+    main()
 
